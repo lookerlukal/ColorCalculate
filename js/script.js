@@ -390,18 +390,22 @@ function drawCIE1931Chart() {
     ctx.scale(zoomLevel, zoomLevel);
     ctx.translate(-centerX + panOffsetX/zoomLevel, -centerY + panOffsetY/zoomLevel);
     
+    // 边界计算
+    const boundLeft = centerX - drawWidth/2;
+    const boundTop = centerY - drawHeight/2;
+    
     // 移除网格线，只保留轴线
     ctx.strokeStyle = '#aaaaaa';
     ctx.lineWidth = 1/zoomLevel;
     ctx.beginPath();
     
     // X轴
-    ctx.moveTo(centerX - drawWidth/2, centerY + drawHeight/2);
+    ctx.moveTo(boundLeft, centerY + drawHeight/2);
     ctx.lineTo(centerX + drawWidth/2, centerY + drawHeight/2);
     
     // Y轴
-    ctx.moveTo(centerX - drawWidth/2, centerY + drawHeight/2);
-    ctx.lineTo(centerX - drawWidth/2, centerY - drawHeight/2);
+    ctx.moveTo(boundLeft, centerY + drawHeight/2);
+    ctx.lineTo(boundLeft, centerY - drawHeight/2);
     
     ctx.stroke();
     
@@ -411,30 +415,26 @@ function drawCIE1931Chart() {
     ctx.textAlign = 'center';
     
     // X轴标注（缩放后的）
-    const stepX = drawWidth / 8; // 分成8份，每份0.1单位
-    for (let i = 0; i <= 8; i++) {
-        const x = centerX - drawWidth/2 + i * stepX;
+    const stepX = drawWidth / 10; // 改为10份，每份0.1单位
+    for (let i = 0; i <= 10; i++) {
+        const x = boundLeft + i * stepX;
         const value = (i * 0.1).toFixed(1);
         ctx.fillText(value, x, centerY + drawHeight/2 + 15/zoomLevel);
     }
     
     ctx.textAlign = 'right';
     // Y轴标注（缩放后的）
-    const stepY = drawHeight / 9; // 分成9份，每份0.1单位
-    for (let i = 0; i <= 9; i++) {
+    const stepY = drawHeight / 10; // 改为10份，每份0.1单位
+    for (let i = 0; i <= 10; i++) {
         const y = centerY + drawHeight/2 - i * stepY;
         const value = (i * 0.1).toFixed(1);
-        ctx.fillText(value, centerX - drawWidth/2 - 5/zoomLevel, y + 5/zoomLevel);
+        ctx.fillText(value, boundLeft - 5/zoomLevel, y + 5/zoomLevel);
     }
     
     // 绘制彩色CIE1931色谱轨迹 - 超高精度版本
     const gridSize = 300; // 提高精细度到300x300
     const stepCellX = drawWidth / gridSize;
     const stepCellY = drawHeight / gridSize;
-    
-    // 计算绘图区域的边界
-    const boundLeft = centerX - drawWidth/2;
-    const boundTop = centerY - drawHeight/2;
     
     // 使用高分辨率网格渲染彩色填充
     for (let i = 0; i < gridSize; i++) {
@@ -478,10 +478,10 @@ function drawCIE1931Chart() {
     ctx.stroke();
     
     // 绘制RGB三角形
-    drawRGBTriangle(centerX, centerY, drawWidth, drawHeight);
+    drawRGBTriangle(boundLeft, boundTop, drawWidth, drawHeight);
     
     // 绘制各个点
-    drawColorPoints(centerX, centerY, drawWidth, drawHeight);
+    drawColorPoints(boundLeft, boundTop, drawWidth, drawHeight);
     
     // 恢复状态，用于绘制不受缩放影响的UI元素
     ctx.restore();
@@ -541,12 +541,10 @@ function drawZoomControls() {
 }
 
 // 绘制RGB颜色三角形
-function drawRGBTriangle(centerX, centerY, drawWidth, drawHeight) {
+function drawRGBTriangle(boundLeft, boundTop, drawWidth, drawHeight) {
     ctx.beginPath();
     
     // 创建坐标映射函数
-    const boundLeft = centerX - drawWidth/2;
-    const boundTop = centerY - drawHeight/2;
     const mapX = x => boundLeft + x * drawWidth;
     const mapY = y => boundTop + (1 - y) * drawHeight;
     
@@ -579,10 +577,8 @@ function drawRGBTriangle(centerX, centerY, drawWidth, drawHeight) {
 }
 
 // 绘制颜色点
-function drawColorPoints(centerX, centerY, drawWidth, drawHeight) {
+function drawColorPoints(boundLeft, boundTop, drawWidth, drawHeight) {
     // 创建坐标映射函数
-    const boundLeft = centerX - drawWidth/2;
-    const boundTop = centerY - drawHeight/2;
     const mapX = x => boundLeft + x * drawWidth;
     const mapY = y => boundTop + (1 - y) * drawHeight;
     
@@ -754,56 +750,91 @@ function onMouseDown(e) {
         return;
     }
     
-    // 左键点击处理颜色点
+    // 左键点击 - 直接在屏幕坐标系统中检测点击
     if (e.button === 0) {
-        // 绘图区域的中心和大小
-        const centerX = canvas.width * 0.5;
-        const centerY = canvas.height * 0.5;
-        const drawWidth = canvas.width * 0.9;
-        const drawHeight = canvas.height * 0.9;
+        // 计算每个颜色点在屏幕上的位置
+        const screenPositions = calculateColorPointScreenPositions();
         
-        // 首先检查是否直接点击了某个颜色点（在屏幕坐标系中）
-        const radiusForHitTest = 15; // 点击检测半径
-        let pointHit = null;
+        // 点击检测半径 - 根据缩放级别调整，确保在任何缩放级别下都有良好的点击体验
+        const hitRadius = 20; // 基本半径
         
-        // 创建坐标映射函数（从色彩坐标转换到画布坐标）
-        const boundLeft = centerX - drawWidth/2;
-        const boundTop = centerY - drawHeight/2;
-        const mapX = x => boundLeft + x * drawWidth;
-        const mapY = y => boundTop + (1 - y) * drawHeight;
+        // 检查是否点击了某个颜色点
+        let hitPoint = null;
+        let minDistance = Infinity;
         
-        // 应用当前的缩放和平移
-        const transformMapX = x => centerX + (mapX(x) - centerX) * zoomLevel + panOffsetX;
-        const transformMapY = y => centerY + (mapY(y) - centerY) * zoomLevel + panOffsetY;
-        
-        // 检查是否点击了任何颜色点
-        const pointsToCheck = ['red', 'green', 'blue'];
-        if (activeMode === 'mode2') {
-            pointsToCheck.push('target');
-        }
-        
-        for (const pointName of pointsToCheck) {
-            const point = colorPoints[pointName];
-            const pointScreenX = transformMapX(point.x);
-            const pointScreenY = transformMapY(point.y);
+        // 检查各个颜色点
+        for (const pointName in screenPositions) {
+            const pos = screenPositions[pointName];
             
+            // 计算鼠标与点的距离
             const distance = Math.sqrt(
-                Math.pow(mouseX - pointScreenX, 2) + 
-                Math.pow(mouseY - pointScreenY, 2)
+                Math.pow(mouseX - pos.x, 2) + 
+                Math.pow(mouseY - pos.y, 2)
             );
             
-            if (distance <= radiusForHitTest) {
-                pointHit = pointName;
-                break;
+            // 如果在检测半径内且是最近的点
+            if (distance < hitRadius && distance < minDistance) {
+                hitPoint = pointName;
+                minDistance = distance;
             }
         }
         
-        if (pointHit) {
-            // 如果点击了颜色点，开始拖动该点
-            draggingPoint = pointHit;
+        // 如果点击了颜色点，开始拖动
+        if (hitPoint) {
+            draggingPoint = hitPoint;
+            console.log(`开始拖拽 ${hitPoint} 点`);
             e.preventDefault();
         }
     }
+}
+
+// 计算所有颜色点在屏幕上的位置
+function calculateColorPointScreenPositions() {
+    const width = canvas.width;
+    const height = canvas.height;
+    const drawWidth = width * 0.9;
+    const drawHeight = height * 0.9;
+    
+    // 计算边界和中心点
+    const centerX = width * 0.5;
+    const centerY = height * 0.5;
+    const boundLeft = centerX - drawWidth/2;
+    const boundTop = centerY - drawHeight/2;
+    
+    // 为所有颜色点计算屏幕位置
+    const positions = {};
+    
+    for (const pointName in colorPoints) {
+        // 跳过不需要绘制的点
+        if (pointName === 'mix' && activeMode !== 'mode1') continue;
+        if (pointName === 'target' && activeMode !== 'mode2') continue;
+        
+        const point = colorPoints[pointName];
+        
+        // 从CIE坐标映射到画布坐标（原始未变换状态）
+        const x = boundLeft + point.x * drawWidth;
+        const y = boundTop + (1 - point.y) * drawHeight;
+        
+        // 按照drawCIE1931Chart中的变换步骤
+        // 1. 先将坐标系原点移到中心
+        const x1 = x - centerX;
+        const y1 = y - centerY;
+        
+        // 2. 应用缩放
+        const x2 = x1 * zoomLevel;
+        const y2 = y1 * zoomLevel;
+        
+        // 3. 移回去并应用用户平移
+        const finalX = x2 + centerX + panOffsetX;
+        const finalY = y2 + centerY + panOffsetY;
+        
+        positions[pointName] = {
+            x: finalX,
+            y: finalY
+        };
+    }
+    
+    return positions;
 }
 
 // 鼠标移动事件
@@ -832,28 +863,18 @@ function onMouseMove(e) {
     
     if (!draggingPoint) return;
     
-    // 绘图区域的中心和大小
-    const centerX = canvas.width * 0.5;
-    const centerY = canvas.height * 0.5;
-    const drawWidth = canvas.width * 0.9;
-    const drawHeight = canvas.height * 0.9;
+    // 将鼠标位置转换为色彩坐标
+    const cie = screenToCieCoordinates(mouseX, mouseY);
     
-    // 创建坐标映射函数
-    const boundLeft = centerX - drawWidth/2;
-    const boundTop = centerY - drawHeight/2;
-    
-    // 计算鼠标在缩放和平移后的相对位置（转换回色彩坐标系）
-    const transformedX = (mouseX - centerX - panOffsetX) / zoomLevel + centerX;
-    const transformedY = (mouseY - centerY - panOffsetY) / zoomLevel + centerY;
-    
-    // 转换为标准化的色彩坐标 (0-1范围)
-    const normalizedX = (transformedX - boundLeft) / drawWidth;
-    const normalizedY = 1 - (transformedY - boundTop) / drawHeight;
+    // 确保坐标在有效范围内
+    cie.x = Math.max(0, Math.min(0.8, cie.x));
+    cie.y = Math.max(0, Math.min(0.9, cie.y));
     
     // 更新拖拽点的位置
-    if (draggingPoint === 'red' || draggingPoint === 'green' || draggingPoint === 'blue' || draggingPoint === 'target') {
-        colorPoints[draggingPoint].x = Math.max(0, Math.min(0.8, normalizedX));
-        colorPoints[draggingPoint].y = Math.max(0, Math.min(0.9, normalizedY));
+    if (draggingPoint in colorPoints) {
+        // 更新颜色点坐标
+        colorPoints[draggingPoint].x = cie.x;
+        colorPoints[draggingPoint].y = cie.y;
         
         // 更新输入框的值
         updateInputFields();
@@ -1053,8 +1074,12 @@ function xyToRgb(x, y) {
 // 获取最近的点
 function getNearestPoint(x, y) {
     const points = ['red', 'green', 'blue'];
+    if (activeMode === 'mode2') {
+        points.push('target');
+    }
+    
     let nearestPoint = null;
-    let minDistance = 0.05; // 初始化为检测阈值
+    let minDistance = Infinity;
     
     for (const point of points) {
         const distance = Math.sqrt(
@@ -1068,7 +1093,8 @@ function getNearestPoint(x, y) {
         }
     }
     
-    return nearestPoint;
+    // 只有当距离小于阈值时才返回最近点
+    return minDistance < 0.2 ? nearestPoint : null;
 }
 
 // 检查是否在点附近
@@ -1114,6 +1140,11 @@ function updateInputFields() {
         document.getElementById('mix-x').textContent = colorPoints.mix.x.toFixed(4);
         document.getElementById('mix-y').textContent = colorPoints.mix.y.toFixed(4);
         document.getElementById('mix-lv').textContent = colorPoints.mix.lv.toFixed(2);
+    }
+    
+    // 触发计算更新（根据当前模式）
+    if (activeMode === 'mode1') {
+        calculateMixedColor();
     }
 }
 
@@ -1287,4 +1318,40 @@ function solveLinearEquation(A, b) {
     }
     
     return solution;
+}
+
+// 将屏幕坐标转换为CIE坐标
+function screenToCieCoordinates(screenX, screenY) {
+    const width = canvas.width;
+    const height = canvas.height;
+    const drawWidth = width * 0.9;
+    const drawHeight = height * 0.9;
+    
+    // 计算边界和中心点
+    const centerX = width * 0.5;
+    const centerY = height * 0.5;
+    const boundLeft = centerX - drawWidth/2;
+    const boundTop = centerY - drawHeight/2;
+    
+    // 按照drawCIE1931Chart中变换的逆序
+    // 1. 撤销用户平移并移到中心
+    const x1 = screenX - panOffsetX - centerX;
+    const y1 = screenY - panOffsetY - centerY;
+    
+    // 2. 撤销缩放
+    const x2 = x1 / zoomLevel;
+    const y2 = y1 / zoomLevel;
+    
+    // 3. 移回画布坐标
+    const canvasX = x2 + centerX;
+    const canvasY = y2 + centerY;
+    
+    // 从画布坐标转换到CIE坐标
+    const cieX = (canvasX - boundLeft) / drawWidth;
+    const cieY = 1 - (canvasY - boundTop) / drawHeight;
+    
+    return {
+        x: Math.max(0, Math.min(1, cieX)),
+        y: Math.max(0, Math.min(1, cieY))
+    };
 } 
