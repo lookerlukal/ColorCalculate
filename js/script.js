@@ -6,6 +6,16 @@ const tab2 = document.getElementById('tab2');
 const mode1 = document.getElementById('mode1');
 const mode2 = document.getElementById('mode2');
 
+// 滑动条步长设置
+let sliderStepSize = 1.0; // 默认步长
+
+// 滑动条最大值设置
+const maxLvValues = {
+    red: 30,
+    green: 30,
+    blue: 30
+};
+
 // 颜色点位置和数据
 let colorPoints = {
     red: { x: 0.7, y: 0.3, lv: 10 },
@@ -17,6 +27,8 @@ let colorPoints = {
 
 // 当前被拖拽的点
 let draggingPoint = null;
+// 用于滑动条拖动状态
+let draggingSlider = null;
 
 // 当前激活的模式
 let activeMode = 'mode1';
@@ -352,6 +364,12 @@ function updateColorPointsFromInputs() {
     colorPoints.green.lv = Math.max(0, colorPoints.green.lv);
     colorPoints.blue.lv = Math.max(0, colorPoints.blue.lv);
     colorPoints.target.lv = Math.max(0, colorPoints.target.lv);
+    
+    // 更新滑动条最大值，基于输入框的光通量值
+    // 使用输入框值的1.5倍作为上限，但最小为30
+    maxLvValues.red = Math.max(30, colorPoints.red.lv * 1.5);
+    maxLvValues.green = Math.max(30, colorPoints.green.lv * 1.5);
+    maxLvValues.blue = Math.max(30, colorPoints.blue.lv * 1.5);
 }
 
 // 绘制CIE1931色度图 - 简化版本，移除缩放和平移
@@ -432,6 +450,12 @@ function drawCIE1931Chart() {
     
     // 绘制各个点
     drawColorPoints(boundLeft, boundTop, drawWidth, drawHeight);
+    
+    // 绘制步长调整按钮
+    drawStepSizeControls();
+    
+    // 禁用调试边界绘制
+    // debugDrawButtonBoundaries();
     
     // 绘制底部标题
     ctx.fillStyle = '#333333';
@@ -548,32 +572,75 @@ function drawColorPoints(boundLeft, boundTop, drawWidth, drawHeight) {
     // 点大小
     const pointSize = 12;
     
-    // 绘制红色点
-    drawPoint(
-        mapX(colorPoints.red.x),
-        mapY(colorPoints.red.y),
-        'red',
-        'R',
-        pointSize
-    );
-    
-    // 绘制绿色点
-    drawPoint(
-        mapX(colorPoints.green.x),
-        mapY(colorPoints.green.y),
-        'green',
-        'G',
-        pointSize
-    );
-    
-    // 绘制蓝色点
-    drawPoint(
-        mapX(colorPoints.blue.x),
-        mapY(colorPoints.blue.y),
-        'blue',
-        'B',
-        pointSize
-    );
+    // 仅在模式1中绘制滑动条
+    if (activeMode === 'mode1') {
+        // 绘制红色点和滑动条
+        drawPoint(
+            mapX(colorPoints.red.x),
+            mapY(colorPoints.red.y),
+            'red',
+            'R',
+            pointSize
+        );
+        drawLvSlider(
+            mapX(colorPoints.red.x) + pointSize * 1.5,
+            mapY(colorPoints.red.y),
+            'red'
+        );
+        
+        // 绘制绿色点和滑动条
+        drawPoint(
+            mapX(colorPoints.green.x),
+            mapY(colorPoints.green.y),
+            'green',
+            'G',
+            pointSize
+        );
+        drawLvSlider(
+            mapX(colorPoints.green.x) + pointSize * 1.5,
+            mapY(colorPoints.green.y),
+            'green'
+        );
+        
+        // 绘制蓝色点和滑动条
+        drawPoint(
+            mapX(colorPoints.blue.x),
+            mapY(colorPoints.blue.y),
+            'blue',
+            'B',
+            pointSize
+        );
+        drawLvSlider(
+            mapX(colorPoints.blue.x) + pointSize * 1.5,
+            mapY(colorPoints.blue.y),
+            'blue'
+        );
+    } else {
+        // 模式2中只绘制点，不绘制滑动条
+        drawPoint(
+            mapX(colorPoints.red.x),
+            mapY(colorPoints.red.y),
+            'red',
+            'R',
+            pointSize
+        );
+        
+        drawPoint(
+            mapX(colorPoints.green.x),
+            mapY(colorPoints.green.y),
+            'green',
+            'G',
+            pointSize
+        );
+        
+        drawPoint(
+            mapX(colorPoints.blue.x),
+            mapY(colorPoints.blue.y),
+            'blue',
+            'B',
+            pointSize
+        );
+    }
     
     // 仅在模式2中显示目标点
     if (activeMode === 'mode2') {
@@ -598,149 +665,336 @@ function drawColorPoints(boundLeft, boundTop, drawWidth, drawHeight) {
     }
 }
 
-// 绘制单个点
-function drawPoint(x, y, color, label, size = 12) {
-    // 外圈白色背景
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    
-    // 中圈颜色边框
-    ctx.beginPath();
-    ctx.arc(x, y, size * 0.8, 0, Math.PI * 2);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    
-    // 内圈颜色填充
-    ctx.beginPath();
-    ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    
-    // 标签文字
-    ctx.fillStyle = 'black';
-    ctx.font = `bold 10px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, x, y);
+// 更新滑动条值（保持函数名不变，但内部逻辑修改）
+function updateSliderValue(mouseY, color) {
+    // 不再需要垂直滑动，改为通过按钮调整
+    // 但保留函数以兼容现有代码
+    console.log("调用了updateSliderValue函数，但现在仅通过按钮调整值");
 }
 
-// 设置事件监听器
-function setupEventListeners() {
-    // 标签切换事件
-    tab1.addEventListener('click', () => switchTab('mode1'));
-    tab2.addEventListener('click', () => switchTab('mode2'));
-    
-    // 点的拖拽事件
-    canvas.addEventListener('mousedown', onMouseDown);
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('mouseup', onMouseUp);
-    canvas.addEventListener('mouseleave', onMouseUp);
-    
-    // 禁用右键菜单
-    canvas.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-    });
-    
-    // 输入框值变化时更新
-    const inputs = document.querySelectorAll('input[type="number"]');
-    inputs.forEach(input => {
-        input.addEventListener('change', () => {
-            // 从输入框更新颜色点数据
-            updateColorPointsFromInputs();
-            // 更新所有输入框
-            updateInputFields();
-            // 重绘色度图
-            drawCIE1931Chart();
-        });
-    });
-    
-    // 计算按钮
-    document.getElementById('calculate-mix').addEventListener('click', calculateMixedColor);
-    document.getElementById('calculate-lv').addEventListener('click', calculateRequiredLuminance);
-}
+// 跟踪最近点击的按钮，用于显示高亮状态
+let lastClickedButton = null;
+let buttonHighlightTimer = null;
 
-// 切换标签页
-function switchTab(mode) {
-    if (mode === 'mode1') {
-        tab1.classList.add('active');
-        tab2.classList.remove('active');
-        mode1.classList.add('active');
-        mode2.classList.remove('active');
-    } else {
-        tab1.classList.remove('active');
-        tab2.classList.add('active');
-        mode1.classList.remove('active');
-        mode2.classList.add('active');
+// 设置按钮点击效果
+function setButtonClickEffect(colorName, buttonType) {
+    // 清除之前的高亮计时器
+    if (buttonHighlightTimer) {
+        clearTimeout(buttonHighlightTimer);
     }
     
-    activeMode = mode;
+    // 记录当前点击的按钮
+    lastClickedButton = {
+        color: colorName,
+        type: buttonType
+    };
     
-    // 确保两个模式之间的数据同步
-    updateColorPointsFromInputs();
-    updateInputFields();
-    
-    // 重绘
+    // 重绘以显示高亮效果
     drawCIE1931Chart();
+    
+    // 300毫秒后清除高亮效果
+    buttonHighlightTimer = setTimeout(() => {
+        lastClickedButton = null;
+        drawCIE1931Chart();
+    }, 300);
 }
 
-// 将屏幕坐标转换为CIE坐标 - 修复版
-function screenToCieCoordinates(screenX, screenY) {
-    // 获取canvas的实际显示尺寸
+// 添加全局坐标转换函数
+function getCanvasScaleFactor() {
     const rect = canvas.getBoundingClientRect();
-    const displayWidth = rect.width;
-    const displayHeight = rect.height;
-    
-    // canvas的像素尺寸
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-    
-    // 如果显示尺寸和像素尺寸不一致，需要调整坐标
-    const scaleX = canvasWidth / displayWidth;
-    const scaleY = canvasHeight / displayHeight;
-    
-    // 将屏幕坐标转换为canvas像素坐标
-    const canvasX = screenX * scaleX;
-    const canvasY = screenY * scaleY;
-    
-    // 绘图区域尺寸 (95% of canvas)
-    const drawWidth = canvasWidth * 0.95;
-    const drawHeight = canvasHeight * 0.95;
-    
-    // 边界计算
-    const boundLeft = (canvasWidth - drawWidth) / 2;
-    const boundTop = (canvasHeight - drawHeight) / 2;
-    
-    // 计算CIE坐标
-    const cieX = (canvasX - boundLeft) / drawWidth;
-    const cieY = 1 - (canvasY - boundTop) / drawHeight;
-    
-    console.log("屏幕点击位置:", screenX, screenY);
-    console.log("画布内位置:", canvasX, canvasY);
-    console.log("边界:", boundLeft, boundTop, drawWidth, drawHeight);
-    console.log("CIE坐标:", cieX, cieY);
-    
-    // 确保坐标在有效范围内
-    return { 
-        x: Math.max(0, Math.min(1, cieX)), 
-        y: Math.max(0, Math.min(1, cieY)) 
+    return {
+        scaleX: canvas.width / rect.width,
+        scaleY: canvas.height / rect.height
     };
 }
 
-// 鼠标按下事件 - 修复版
+// 屏幕坐标转换为Canvas坐标
+function screenToCanvasCoordinates(screenX, screenY) {
+    const scale = getCanvasScaleFactor();
+    return {
+        x: screenX * scale.scaleX,
+        y: screenY * scale.scaleY
+    };
+}
+
+// 获取CIE绘图区域边界
+function getDrawAreaBounds() {
+    const width = canvas.width;
+    const height = canvas.height;
+    const drawWidth = width * 0.95;
+    const drawHeight = height * 0.95;
+    
+    return {
+        left: (width - drawWidth) / 2,
+        top: (height - drawHeight) / 2,
+        width: drawWidth,
+        height: drawHeight
+    };
+}
+
+// 计算按钮的精确位置和边界
+function calculateButtonPositions(colorName) {
+    // 获取绘图区域边界
+    const bounds = getDrawAreaBounds();
+    
+    // 创建坐标映射函数
+    const mapX = x => bounds.left + x * bounds.width;
+    const mapY = y => bounds.top + (1 - y) * bounds.height;
+    
+    // 获取色点坐标
+    const point = colorPoints[colorName];
+    const x = mapX(point.x);
+    const y = mapY(point.y);
+    
+    // 按钮尺寸设置
+    const buttonSize = 15;
+    const spacing = 5;
+    
+    // 计算控制组的中心位置
+    const controlX = x + buttonSize * 2.5;
+    
+    // 计算精确的按钮边界
+    const plusLeft = controlX - buttonSize - spacing - buttonSize/2;
+    const plusTop = y - buttonSize/2;
+    const minusLeft = controlX + buttonSize + spacing - buttonSize/2;
+    const minusTop = y - buttonSize/2;
+    
+    return {
+        controlX: controlX,
+        y: y,
+        plus: {
+            x: controlX - buttonSize - spacing,
+            y: y,
+            left: plusLeft,
+            top: plusTop,
+            right: plusLeft + buttonSize,
+            bottom: plusTop + buttonSize
+        },
+        minus: {
+            x: controlX + buttonSize + spacing,
+            y: y,
+            left: minusLeft,
+            top: minusTop,
+            right: minusLeft + buttonSize,
+            bottom: minusTop + buttonSize
+        }
+    };
+}
+
+// 修改drawLvSlider函数
+function drawLvSlider(x, y, colorName) {
+    const buttonSize = 15;
+    
+    // 获取当前光通量
+    const currentLv = colorPoints[colorName].lv;
+    const maxLv = maxLvValues[colorName];
+    
+    // 获取按钮位置
+    const positions = calculateButtonPositions(colorName);
+    
+    // 保存按钮位置到全局
+    if (typeof window.buttonPositions === 'undefined') {
+        window.buttonPositions = {};
+    }
+    window.buttonPositions[colorName] = positions;
+    
+    // 检查按钮是否处于高亮状态
+    const isMinusHighlighted = lastClickedButton && 
+                              lastClickedButton.color === colorName && 
+                              lastClickedButton.type === 'minus';
+    
+    // 减小按钮（-）- 方形
+    ctx.beginPath();
+    ctx.rect(
+        positions.minus.left, 
+        positions.minus.top, 
+        buttonSize, 
+        buttonSize
+    );
+    ctx.fillStyle = isMinusHighlighted ? 'rgb(200, 200, 255)' : 'white';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.stroke();
+    
+    // 绘制 - 符号
+    ctx.beginPath();
+    ctx.moveTo(positions.minus.x - buttonSize/3, positions.y);
+    ctx.lineTo(positions.minus.x + buttonSize/3, positions.y);
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // 显示当前值（改为黑色）
+    ctx.font = 'bold 12px "Microsoft YaHei", "等线", Arial';
+    ctx.fillStyle = 'black'; // 将数字颜色统一改为黑色
+    ctx.textAlign = 'center';
+    ctx.fillText(currentLv.toFixed(1), positions.controlX, positions.y + 4);
+    
+    // 检查按钮是否处于高亮状态
+    const isPlusHighlighted = lastClickedButton && 
+                             lastClickedButton.color === colorName && 
+                             lastClickedButton.type === 'plus';
+    
+    // 增加按钮（+）- 方形
+    ctx.beginPath();
+    ctx.rect(
+        positions.plus.left, 
+        positions.plus.top, 
+        buttonSize, 
+        buttonSize
+    );
+    ctx.fillStyle = isPlusHighlighted ? 'rgb(200, 200, 255)' : 'white';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.stroke();
+    
+    // 绘制 + 符号
+    ctx.beginPath();
+    ctx.moveTo(positions.plus.x - buttonSize/3, positions.y);
+    ctx.lineTo(positions.plus.x + buttonSize/3, positions.y);
+    ctx.moveTo(positions.plus.x, positions.y - buttonSize/3);
+    ctx.lineTo(positions.plus.x, positions.y + buttonSize/3);
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+}
+
+// 修改isOnSlider函数来使用统一坐标转换
+function isOnSlider(mouseX, mouseY) {
+    // 只在模式1中检查按钮
+    if (activeMode !== 'mode1') return null;
+    
+    // 转换屏幕坐标到canvas坐标
+    const canvasCoord = screenToCanvasCoordinates(mouseX, mouseY);
+    const canvasX = canvasCoord.x;
+    const canvasY = canvasCoord.y;
+    
+    // 调试信息
+    console.log("统一坐标转换 - 鼠标位置:", canvasX, canvasY);
+    
+    // 检查每个颜色的控件
+    const colors = ['red', 'green', 'blue'];
+    
+    for (const color of colors) {
+        const positions = calculateButtonPositions(color);
+        
+        // 检查是否在增加按钮内
+        if (canvasX >= positions.plus.left && canvasX <= positions.plus.right && 
+            canvasY >= positions.plus.top && canvasY <= positions.plus.bottom) {
+            console.log(`点击了${color}的+按钮`);
+            return color + '_plus';
+        }
+        
+        // 检查是否在减小按钮内
+        if (canvasX >= positions.minus.left && canvasX <= positions.minus.right && 
+            canvasY >= positions.minus.top && canvasY <= positions.minus.bottom) {
+            console.log(`点击了${color}的-按钮`);
+            return color + '_minus';
+        }
+    }
+    
+    return null;
+}
+
+// 修改onMouseDown函数，使用统一坐标转换
 function onMouseDown(e) {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
-    // 左键点击 - 用于拖动颜色点
+    // 输出原始鼠标位置信息
+    console.log("原始鼠标位置(屏幕坐标):", mouseX, mouseY);
+    
+    // 获取DPI缩放信息
+    const scale = getCanvasScaleFactor();
+    console.log("DPI缩放比例:", scale.scaleX, scale.scaleY);
+    
+    // 转换为canvas坐标
+    const canvasCoord = screenToCanvasCoordinates(mouseX, mouseY);
+    
+    // 移除调试标记绘制
+    // ctx.beginPath();
+    // ctx.arc(canvasCoord.x, canvasCoord.y, 5, 0, Math.PI * 2);
+    // ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+    // ctx.fill();
+    
+    // 左键点击
     if (e.button === 0) {
-        // 获取点击位置的CIE坐标
+        // 检查是否点击了步长控制按钮
+        if (activeMode === 'mode1') {
+            const buttonWidth = 20;
+            const buttonHeight = 20;
+            const padding = 10;
+            const x = canvas.width - buttonWidth * 2 - padding * 3;
+            const y = canvas.height - buttonHeight - padding;
+            
+            // 减小步长按钮
+            if (canvasCoord.x >= x && canvasCoord.x <= x + buttonWidth && 
+                canvasCoord.y >= y && canvasCoord.y <= y + buttonHeight) {
+                sliderStepSize = Math.max(0.1, sliderStepSize - 0.1);
+                drawCIE1931Chart();
+                e.preventDefault();
+                return;
+            }
+            
+            // 增加步长按钮
+            if (canvasCoord.x >= x + buttonWidth + padding && canvasCoord.x <= x + buttonWidth * 2 + padding && 
+                canvasCoord.y >= y && canvasCoord.y <= y + buttonHeight) {
+                sliderStepSize = Math.min(5.0, sliderStepSize + 0.1);
+                drawCIE1931Chart();
+                e.preventDefault();
+                return;
+            }
+        }
+        
+        // 先检查是否点击了按钮（仅模式1中）
+        if (activeMode === 'mode1') {
+            // 传入原始鼠标位置，函数内部会处理坐标转换
+            const sliderResult = isOnSlider(mouseX, mouseY);
+            console.log("isOnSlider结果:", sliderResult);
+            
+            if (sliderResult) {
+                // 检查是否点击了加减按钮
+                if (sliderResult.includes('_plus') || sliderResult.includes('_minus')) {
+                    // 提取颜色名
+                    const colorName = sliderResult.split('_')[0];
+                    lastSelectedColor = colorName; // 记录选中的颜色
+                    const isPlus = sliderResult.includes('_plus');
+                    
+                    // 设置按钮点击效果
+                    setButtonClickEffect(colorName, isPlus ? 'plus' : 'minus');
+                    
+                    // 获取动态上限值
+                    const maxLv = maxLvValues[colorName];
+                    const minLv = 0;
+                    
+                    // 增加或减少光通量
+                    if (isPlus) {
+                        colorPoints[colorName].lv = Math.min(maxLv, colorPoints[colorName].lv + sliderStepSize);
+                    } else {
+                        colorPoints[colorName].lv = Math.max(minLv, colorPoints[colorName].lv - sliderStepSize);
+                    }
+                    
+                    // 更新输入框的值
+                    document.getElementById(`${colorName}-lv`).value = colorPoints[colorName].lv.toFixed(1);
+                    
+                    // 重新计算混合色
+                    calculateMixedColor();
+                    
+                    // 重绘已在setButtonClickEffect中调用
+                    e.preventDefault();
+                    return;
+                }
+                
+                draggingSlider = sliderResult;
+                lastSelectedColor = sliderResult; // 记录选中的滑动条颜色
+                updateSliderValue(mouseY, sliderResult);
+                e.preventDefault();
+                return;
+            }
+        }
+        
+        // 如果没有点击滑动条，检查是否点击了颜色点
         const cieCoord = screenToCieCoordinates(mouseX, mouseY);
         
         console.log("点击位置:", cieCoord.x.toFixed(4), cieCoord.y.toFixed(4));
@@ -802,6 +1056,7 @@ function onMouseDown(e) {
         if (minDist <= clickTolerance) {
             console.log("选中点:", hitPoint);
             draggingPoint = hitPoint;
+            lastSelectedColor = hitPoint; // 记录选中的颜色点
             e.preventDefault();
         } else {
             console.log("未选中任何点");
@@ -809,13 +1064,20 @@ function onMouseDown(e) {
     }
 }
 
-// 鼠标移动事件 - 修复版
+// 鼠标移动事件 - 修改以支持滑动条
 function onMouseMove(e) {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
-    // 如果是拖动颜色点
+    // 如果正在拖动滑动条
+    if (draggingSlider) {
+        updateSliderValue(mouseY, draggingSlider);
+        e.preventDefault();
+        return;
+    }
+    
+    // 如果正在拖动颜色点
     if (draggingPoint) {
         // 将鼠标位置转换为色彩坐标
         const cie = screenToCieCoordinates(mouseX, mouseY);
@@ -838,9 +1100,10 @@ function onMouseMove(e) {
     }
 }
 
-// 鼠标松开事件 - 简化版
+// 鼠标松开事件 - 修改以支持滑动条
 function onMouseUp(e) {
     draggingPoint = null;
+    draggingSlider = null;
     
     // 重绘以清除坐标显示
     if (!e || e.type === 'mouseup') {
@@ -1191,4 +1454,273 @@ function showCoordinates(pointName, x, y) {
     ctx.fillText(text, x, y - 22);
     
     ctx.restore();
+}
+
+// 添加绘制步长调节按钮
+function drawStepSizeControls() {
+    // 仅在模式1中显示步长控制
+    if (activeMode !== 'mode1') return;
+    
+    const padding = 10;
+    const buttonWidth = 20;
+    const buttonHeight = 20;
+    
+    // 计算位置
+    const x = canvas.width - buttonWidth * 2 - padding * 3;
+    const y = canvas.height - buttonHeight - padding;
+    
+    // 绘制减小步长按钮
+    ctx.fillStyle = 'rgba(240, 240, 240, 0.9)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.lineWidth = 1;
+    
+    // 减小步长按钮
+    ctx.beginPath();
+    ctx.rect(x, y, buttonWidth, buttonHeight);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 减号符号
+    ctx.beginPath();
+    ctx.moveTo(x + 5, y + buttonHeight/2);
+    ctx.lineTo(x + buttonWidth - 5, y + buttonHeight/2);
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // 增加步长按钮
+    ctx.beginPath();
+    ctx.rect(x + buttonWidth + padding, y, buttonWidth, buttonHeight);
+    ctx.fillStyle = 'rgba(240, 240, 240, 0.9)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.stroke();
+    
+    // 加号符号
+    ctx.beginPath();
+    ctx.moveTo(x + buttonWidth + padding + 5, y + buttonHeight/2);
+    ctx.lineTo(x + buttonWidth * 2 + padding - 5, y + buttonHeight/2);
+    ctx.moveTo(x + buttonWidth + padding + buttonWidth/2, y + 5);
+    ctx.lineTo(x + buttonWidth + padding + buttonWidth/2, y + buttonHeight - 5);
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // 显示当前步长
+    ctx.font = '10px Arial';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.fillText(`步长: ${sliderStepSize.toFixed(1)}`, x + buttonWidth + padding + 10, y - 5);
+}
+
+// 添加调试辅助函数
+function debugDrawButtonBoundaries() {
+    // 只在模式1中显示边界
+    if (activeMode !== 'mode1') return;
+    
+    // 设置半透明调试样式
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+    ctx.lineWidth = 1;
+    
+    const colors = ['red', 'green', 'blue'];
+    
+    for (const color of colors) {
+        const positions = calculateButtonPositions(color);
+        
+        // 绘制原始颜色点的位置标记
+        ctx.beginPath();
+        ctx.arc(positions.controlX, positions.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.fill();
+        
+        // 绘制增加按钮边界
+        ctx.beginPath();
+        ctx.rect(
+            positions.plus.left, 
+            positions.plus.top, 
+            positions.plus.right - positions.plus.left, 
+            positions.plus.bottom - positions.plus.top
+        );
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        ctx.stroke();
+        
+        // 绘制减小按钮边界
+        ctx.beginPath();
+        ctx.rect(
+            positions.minus.left, 
+            positions.minus.top, 
+            positions.minus.right - positions.minus.left, 
+            positions.minus.bottom - positions.minus.top
+        );
+        ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';
+        ctx.stroke();
+    }
+}
+
+// 修改drawPoint函数以确保正确绘制
+function drawPoint(x, y, color, label, size = 12) {
+    // 外圈白色背景
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // 中圈颜色边框
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.8, 0, Math.PI * 2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    // 内圈颜色填充
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    // 标签文字
+    ctx.fillStyle = 'black';
+    ctx.font = `bold 10px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x, y);
+}
+
+// 修改将屏幕坐标转换为CIE坐标的函数
+function screenToCieCoordinates(screenX, screenY) {
+    // 转换为canvas坐标
+    const canvasCoord = screenToCanvasCoordinates(screenX, screenY);
+    const canvasX = canvasCoord.x;
+    const canvasY = canvasCoord.y;
+    
+    // 获取绘图区域边界
+    const bounds = getDrawAreaBounds();
+    
+    // 计算CIE坐标
+    const cieX = (canvasX - bounds.left) / bounds.width;
+    const cieY = 1 - (canvasY - bounds.top) / bounds.height;
+    
+    // 调试信息
+    console.log("屏幕点击位置:", screenX, screenY);
+    console.log("画布内位置:", canvasX, canvasY);
+    console.log("绘图区域边界:", bounds.left, bounds.top, bounds.width, bounds.height);
+    console.log("CIE坐标:", cieX, cieY);
+    
+    // 确保坐标在有效范围内
+    return { 
+        x: Math.max(0, Math.min(1, cieX)), 
+        y: Math.max(0, Math.min(1, cieY)) 
+    };
+}
+
+// 设置事件监听器
+function setupEventListeners() {
+    // 标签切换事件
+    tab1.addEventListener('click', () => switchTab('mode1'));
+    tab2.addEventListener('click', () => switchTab('mode2'));
+    
+    // 点的拖拽事件
+    canvas.addEventListener('mousedown', onMouseDown);
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('mouseleave', onMouseUp);
+    
+    // 禁用右键菜单
+    canvas.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
+    
+    // 添加键盘事件监听，用于调整滑动条
+    document.addEventListener('keydown', onKeyDown);
+    
+    // 输入框值变化时更新
+    const inputs = document.querySelectorAll('input[type="number"]');
+    inputs.forEach(input => {
+        input.addEventListener('change', () => {
+            // 从输入框更新颜色点数据
+            updateColorPointsFromInputs();
+            // 更新所有输入框
+            updateInputFields();
+            // 重绘色度图
+            drawCIE1931Chart();
+        });
+    });
+    
+    // 计算按钮
+    document.getElementById('calculate-mix').addEventListener('click', calculateMixedColor);
+    document.getElementById('calculate-lv').addEventListener('click', calculateRequiredLuminance);
+}
+
+// 用于记录最后选中的颜色点
+let lastSelectedColor = null;
+
+// 键盘事件处理
+function onKeyDown(e) {
+    // 只在模式1下生效，且需要有上次选中的颜色
+    if (activeMode !== 'mode1' || !lastSelectedColor) return;
+    
+    const stepSize = e.shiftKey ? sliderStepSize * 0.1 : sliderStepSize; // Shift键按下时使用更小的步长
+    const maxLv = maxLvValues[lastSelectedColor]; // 使用动态上限值
+    const minLv = 0;
+    
+    // 处理方向键
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+        // 增加光通量
+        colorPoints[lastSelectedColor].lv = Math.min(maxLv, colorPoints[lastSelectedColor].lv + stepSize);
+        e.preventDefault();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+        // 减少光通量
+        colorPoints[lastSelectedColor].lv = Math.max(minLv, colorPoints[lastSelectedColor].lv - stepSize);
+        e.preventDefault();
+    } else if (e.key === 'PageUp') {
+        // 增加步长
+        sliderStepSize = Math.min(5.0, sliderStepSize + 0.1);
+        e.preventDefault();
+        drawCIE1931Chart(); // 更新显示
+        return;
+    } else if (e.key === 'PageDown') {
+        // 减小步长
+        sliderStepSize = Math.max(0.1, sliderStepSize - 0.1);
+        e.preventDefault();
+        drawCIE1931Chart(); // 更新显示
+        return;
+    } else {
+        return; // 非方向键不处理
+    }
+    
+    // 更新输入框的值
+    document.getElementById(`${lastSelectedColor}-lv`).value = colorPoints[lastSelectedColor].lv.toFixed(1);
+    
+    // 重新计算混合色
+    calculateMixedColor();
+    
+    // 重绘
+    drawCIE1931Chart();
+}
+
+// 切换标签页
+function switchTab(mode) {
+    if (mode === 'mode1') {
+        tab1.classList.add('active');
+        tab2.classList.remove('active');
+        mode1.classList.add('active');
+        mode2.classList.remove('active');
+    } else {
+        tab1.classList.remove('active');
+        tab2.classList.add('active');
+        mode1.classList.remove('active');
+        mode2.classList.add('active');
+    }
+    
+    activeMode = mode;
+    
+    // 确保两个模式之间的数据同步
+    updateColorPointsFromInputs();
+    updateInputFields();
+    
+    // 重绘
+    drawCIE1931Chart();
 } 
