@@ -16,6 +16,23 @@ const maxLvValues = {
     blue: 30
 };
 
+// 添加NTSC色域标准坐标
+const ntscColorSpace = {
+    red: { x: 0.67, y: 0.33 },
+    green: { x: 0.21, y: 0.71 },
+    blue: { x: 0.14, y: 0.08 }
+};
+
+// 添加sRGB色域标准坐标
+const srgbColorSpace = {
+    red: { x: 0.64, y: 0.33 },
+    green: { x: 0.30, y: 0.60 },
+    blue: { x: 0.15, y: 0.06 }
+};
+
+// 色域显示开关
+let showGamutBoundaries = true;
+
 // 颜色点位置和数据
 let colorPoints = {
     red: { x: 0.7, y: 0.3, lv: 10 },
@@ -445,6 +462,29 @@ function drawCIE1931Chart() {
     ctx.lineWidth = 2;
     ctx.stroke();
     
+    // 根据开关状态绘制标准色域三角形
+    if (showGamutBoundaries) {
+        // 绘制NTSC色域三角形
+        ctx.beginPath();
+        ctx.moveTo(mapX(ntscColorSpace.red.x), mapY(ntscColorSpace.red.y));
+        ctx.lineTo(mapX(ntscColorSpace.green.x), mapY(ntscColorSpace.green.y));
+        ctx.lineTo(mapX(ntscColorSpace.blue.x), mapY(ntscColorSpace.blue.y));
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // 绘制sRGB色域三角形
+        ctx.beginPath();
+        ctx.moveTo(mapX(srgbColorSpace.red.x), mapY(srgbColorSpace.red.y));
+        ctx.lineTo(mapX(srgbColorSpace.green.x), mapY(srgbColorSpace.green.y));
+        ctx.lineTo(mapX(srgbColorSpace.blue.x), mapY(srgbColorSpace.blue.y));
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(0, 0, 200, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+    
     // 绘制RGB三角形
     drawRGBTriangle(boundLeft, boundTop, drawWidth, drawHeight);
     
@@ -454,8 +494,11 @@ function drawCIE1931Chart() {
     // 绘制步长调整按钮
     drawStepSizeControls();
     
-    // 禁用调试边界绘制
-    // debugDrawButtonBoundaries();
+    // 绘制色域显示开关
+    drawGamutDisplayToggle(boundLeft, boundTop, drawWidth, drawHeight);
+    
+    // 计算并显示色域覆盖率
+    drawGamutCoverageInfo(boundLeft, boundTop, drawWidth, drawHeight);
     
     // 绘制底部标题
     ctx.fillStyle = '#333333';
@@ -912,14 +955,35 @@ function onMouseDown(e) {
     // 转换为canvas坐标
     const canvasCoord = screenToCanvasCoordinates(mouseX, mouseY);
     
-    // 移除调试标记绘制
-    // ctx.beginPath();
-    // ctx.arc(canvasCoord.x, canvasCoord.y, 5, 0, Math.PI * 2);
-    // ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-    // ctx.fill();
-    
     // 左键点击
     if (e.button === 0) {
+        // 检查是否点击了色域显示开关
+        const width = canvas.width;
+        const height = canvas.height;
+        const drawWidth = width * 0.95;
+        const drawHeight = height * 0.95;
+        const boundLeft = (width - drawWidth) / 2;
+        const boundTop = (height - drawHeight) / 2;
+        
+        // 使用与绘制函数相同的计算方式确定开关位置
+        const infoX = boundLeft + drawWidth * 0.70; // 修改为0.70，与drawGamutDisplayToggle一致
+        const infoY = boundTop + drawHeight * 0.08;
+        const toggleX = infoX + 98; // 修改为98，与drawGamutDisplayToggle一致
+        const toggleY = infoY + 75; // 修改为75，与drawGamutDisplayToggle一致
+        const toggleWidth = 24;
+        const toggleHeight = 14;
+        
+        // 检查是否点击了开关
+        if (canvasCoord.x >= toggleX && canvasCoord.x <= toggleX + toggleWidth &&
+            canvasCoord.y >= toggleY && canvasCoord.y <= toggleY + toggleHeight) {
+            // 切换开关状态
+            showGamutBoundaries = !showGamutBoundaries;
+            // 重绘
+            drawCIE1931Chart();
+            e.preventDefault();
+            return;
+        }
+        
         // 检查是否点击了步长控制按钮
         if (activeMode === 'mode1') {
             const buttonWidth = 20;
@@ -1723,4 +1787,133 @@ function switchTab(mode) {
     
     // 重绘
     drawCIE1931Chart();
+}
+
+// 计算三角形面积
+function calculateTriangleArea(p1, p2, p3) {
+    return Math.abs(
+        (p1.x * (p2.y - p3.y) + 
+         p2.x * (p3.y - p1.y) + 
+         p3.x * (p1.y - p2.y)) / 2
+    );
+}
+
+// 计算并显示色域覆盖率信息
+function drawGamutCoverageInfo(boundLeft, boundTop, drawWidth, drawHeight) {
+    // 如果开关关闭，则不显示
+    if (!showGamutBoundaries) return;
+    
+    // 计算NTSC和sRGB色域覆盖率
+    const ntscInfo = calculateGamutCoverage(ntscColorSpace);
+    const srgbInfo = calculateGamutCoverage(srgbColorSpace);
+    
+    // 设置背景 - 将位置向左移动
+    const infoX = boundLeft + drawWidth * 0.70; // 从0.78减小到0.70
+    const infoY = boundTop + drawHeight * 0.08;
+    
+    // 增加面板高度，为开关留出空间
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.fillRect(infoX - 10, infoY - 20, 160, 85);
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(infoX - 10, infoY - 20, 160, 85);
+    
+    // 设置文字样式
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 12px "Microsoft YaHei", "等线", Arial';
+    ctx.textAlign = 'left';
+    
+    // 显示NTSC色域覆盖率
+    ctx.fillText(`NTSC色域: ${ntscInfo.coverage.toFixed(1)}%`, infoX, infoY);
+    
+    // 显示sRGB色域覆盖率
+    ctx.fillText(`sRGB色域: ${srgbInfo.coverage.toFixed(1)}%`, infoX, infoY + 20);
+    
+    // 根据NTSC色域显示质量描述
+    const colorQuality = getColorQualityDescription(ntscInfo.coverage);
+    ctx.fillText(colorQuality, infoX, infoY + 40);
+}
+
+// 计算色域覆盖率（通用函数）
+function calculateGamutCoverage(standardColorSpace) {
+    // 计算标准三角形面积
+    const standardArea = calculateTriangleArea(
+        standardColorSpace.red,
+        standardColorSpace.green,
+        standardColorSpace.blue
+    );
+    
+    // 计算当前RGB三角形面积
+    const currentRGBArea = calculateTriangleArea(
+        colorPoints.red,
+        colorPoints.green,
+        colorPoints.blue
+    );
+    
+    // 简化的色域覆盖率计算
+    const coverage = (currentRGBArea / standardArea) * 100;
+    
+    return {
+        standardArea: standardArea,
+        currentArea: currentRGBArea,
+        coverage: coverage
+    };
+}
+
+// 绘制色域显示开关
+function drawGamutDisplayToggle(boundLeft, boundTop, drawWidth, drawHeight) {
+    // 调整开关位置到文字下方 - 保持与信息面板一致
+    const infoX = boundLeft + drawWidth * 0.70; // 从0.78减小到0.70，与上面保持一致
+    const infoY = boundTop + drawHeight * 0.08;
+    
+    // 将开关放置在色域信息面板下方
+    const toggleX = infoX + 98;
+    const toggleY = infoY + 75;
+    const toggleWidth = 24;
+    const toggleHeight = 14;
+    
+    // 绘制开关背景
+    ctx.fillStyle = showGamutBoundaries ? 'rgba(120, 200, 120, 0.8)' : 'rgba(200, 200, 200, 0.8)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.lineWidth = 1;
+    
+    // 圆角矩形
+    ctx.beginPath();
+    ctx.moveTo(toggleX, toggleY);
+    ctx.lineTo(toggleX + toggleWidth - toggleHeight/2, toggleY);
+    ctx.arc(toggleX + toggleWidth - toggleHeight/2, toggleY + toggleHeight/2, toggleHeight/2, -Math.PI/2, Math.PI/2);
+    ctx.lineTo(toggleX + toggleHeight/2, toggleY + toggleHeight);
+    ctx.arc(toggleX + toggleHeight/2, toggleY + toggleHeight/2, toggleHeight/2, Math.PI/2, -Math.PI/2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // 绘制滑块
+    const sliderPos = showGamutBoundaries ? toggleX + toggleWidth - toggleHeight : toggleX;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(sliderPos + toggleHeight/2, toggleY + toggleHeight/2, toggleHeight/2 - 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // 将标签放置在开关左侧
+    ctx.fillStyle = '#333333';
+    ctx.font = '11px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText("色域计算与显示", toggleX - 5, toggleY + toggleHeight/2 + 4);
+}
+
+// 获取色域质量描述
+function getColorQualityDescription(coverage) {
+    if (coverage >= 100) {
+        return "色域: 专业级";
+    } else if (coverage >= 85) {
+        return "色域: 优秀";
+    } else if (coverage >= 72) {
+        return "色域: 良好";
+    } else if (coverage >= 60) {
+        return "色域: 一般";
+    } else {
+        return "色域: 较窄";
+    }
 } 
