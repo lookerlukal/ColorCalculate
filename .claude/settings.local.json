@@ -8,7 +8,8 @@
       "Bash(rm:*)",
       "Bash(git add:*)",
       "Bash(cp:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)"
     ],
     "deny": []
   }

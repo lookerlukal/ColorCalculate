@@ -418,6 +418,43 @@ const ChartRenderer = {
         return inside;
     },
     
+    // 调试信息绘制
+    drawDebugInfo(mouseX, mouseY) {
+        const ctx = this.ctx;
+        ctx.save();
+        
+        // 绘制鼠标位置十字线
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(mouseX - 10, mouseY);
+        ctx.lineTo(mouseX + 10, mouseY);
+        ctx.moveTo(mouseX, mouseY - 10);
+        ctx.lineTo(mouseX, mouseY + 10);
+        ctx.stroke();
+        
+        // 显示坐标信息
+        ctx.fillStyle = 'black';
+        ctx.font = '12px monospace';
+        ctx.fillRect(mouseX + 15, mouseY - 20, 200, 15);
+        ctx.fillStyle = 'white';
+        ctx.fillText(`Mouse: (${mouseX.toFixed(0)}, ${mouseY.toFixed(0)})`, mouseX + 16, mouseY - 8);
+        
+        // 显示DPI和缩放信息在左上角
+        const infoY = 20;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(8, 8, 300, 80);
+        ctx.fillStyle = 'white';
+        ctx.fillText(`DPR: ${window.devicePixelRatio}`, 10, infoY);
+        ctx.fillText(`Scale: ${this.transform.scale.toFixed(2)}`, 10, infoY + 15);
+        ctx.fillText(`Canvas: ${this.canvas.width}x${this.canvas.height}`, 10, infoY + 30);
+        ctx.fillText(`CSS: ${this.canvas.style.width}x${this.canvas.style.height}`, 10, infoY + 45);
+        ctx.fillText(`Offset: ${this.transform.offsetX.toFixed(0)}, ${this.transform.offsetY.toFixed(0)}`, 10, infoY + 60);
+        
+        ctx.restore();
+    },
+    
     // CIE xy 到 RGB 的近似转换（用于背景着色）
     xyToRGB(x, y) {
         // 这是一个简化的转换，仅用于显示目的
