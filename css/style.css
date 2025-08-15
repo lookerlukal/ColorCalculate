@@ -271,4 +271,16 @@ input[type="number"] {
     .preset-controls {
         flex-direction: column;
     }
+}
+
+/* 模式提示样式 */
+.mode-note {
+    background-color: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 15px 0;
+    color: #1976d2;
+    font-size: 14px;
+    text-align: center;
 } 

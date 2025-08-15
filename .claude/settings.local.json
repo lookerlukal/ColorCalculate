@@ -7,7 +7,8 @@
       "Bash(del nul)",
       "Bash(rm:*)",
       "Bash(git add:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

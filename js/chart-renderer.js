@@ -165,34 +165,61 @@ const ChartRenderer = {
         ctx.stroke();
     },
     
-    // 绘制网格
+    // 绘制网格和坐标轴
     drawGrid(ctx, width, height) {
         ctx.strokeStyle = `rgba(0, 0, 0, ${ColorCalculatorConfig.ui.gridAlpha})`;
         ctx.lineWidth = 0.5;
         
         const gridSpacing = 0.1;
+        const maxCoord = 0.9; // 统一最大坐标范围
         
-        // 垂直线
-        for (let x = 0; x <= 0.8; x += gridSpacing) {
+        // 垂直线和x轴标注
+        for (let x = 0; x <= maxCoord; x += gridSpacing) {
             const startScreen = this.cieToScreenCoordinates(x, 0, width, height);
-            const endScreen = this.cieToScreenCoordinates(x, 0.9, width, height);
+            const endScreen = this.cieToScreenCoordinates(x, maxCoord, width, height);
             
             ctx.beginPath();
             ctx.moveTo(startScreen.x, startScreen.y);
             ctx.lineTo(endScreen.x, endScreen.y);
             ctx.stroke();
+            
+            // 绘制x轴标注（每0.1一个刻度）
+            ctx.fillStyle = '#000';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(x.toFixed(1), startScreen.x, startScreen.y + 15);
         }
         
-        // 水平线
-        for (let y = 0; y <= 0.9; y += gridSpacing) {
+        // 水平线和y轴标注
+        for (let y = 0; y <= maxCoord; y += gridSpacing) {
             const startScreen = this.cieToScreenCoordinates(0, y, width, height);
-            const endScreen = this.cieToScreenCoordinates(0.8, y, width, height);
+            const endScreen = this.cieToScreenCoordinates(maxCoord, y, width, height);
             
             ctx.beginPath();
             ctx.moveTo(startScreen.x, startScreen.y);
             ctx.lineTo(endScreen.x, endScreen.y);
             ctx.stroke();
+            
+            // 绘制y轴标注（每0.1一个刻度）
+            ctx.fillStyle = '#000';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(y.toFixed(1), startScreen.x - 5, startScreen.y + 3);
         }
+        
+        // 绘制坐标轴标签
+        ctx.fillStyle = '#000';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        const xAxisLabelPos = this.cieToScreenCoordinates(maxCoord / 2, 0, width, height);
+        ctx.fillText('x', xAxisLabelPos.x, xAxisLabelPos.y + 35);
+        
+        ctx.save();
+        const yAxisLabelPos = this.cieToScreenCoordinates(0, maxCoord / 2, width, height);
+        ctx.translate(15, yAxisLabelPos.y);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText('y', 0, 0);
+        ctx.restore();
     },
     
     // 绘制色域边界
@@ -307,39 +334,41 @@ const ChartRenderer = {
     // 坐标转换函数
     cieToScreenCoordinates(cieX, cieY, canvasWidth, canvasHeight) {
         const margin = 50;
-        const drawWidth = canvasWidth - 2 * margin;
-        const drawHeight = canvasHeight - 2 * margin;
+        const maxCoord = 0.9; // CIE图的最大坐标范围
+        // 使用最小的边作为绘制区域，确保x和y轴等比例
+        const minDimension = Math.min(canvasWidth, canvasHeight) - 2 * margin;
         
         return {
-            x: margin + cieX * drawWidth,
-            y: canvasHeight - margin - cieY * drawHeight
+            x: margin + (cieX / maxCoord) * minDimension,
+            y: canvasHeight - margin - (cieY / maxCoord) * minDimension
         };
     },
     
     screenToCieCoordinates(screenX, screenY, canvasWidth, canvasHeight) {
         const margin = 50;
-        const drawWidth = canvasWidth - 2 * margin;
-        const drawHeight = canvasHeight - 2 * margin;
+        const maxCoord = 0.9; // CIE图的最大坐标范围
+        // 使用最小的边作为绘制区域，确保x和y轴等比例
+        const minDimension = Math.min(canvasWidth, canvasHeight) - 2 * margin;
         
         return {
-            x: (screenX - margin) / drawWidth,
-            y: (canvasHeight - margin - screenY) / drawHeight
+            x: ((screenX - margin) / minDimension) * maxCoord,
+            y: ((canvasHeight - margin - screenY) / minDimension) * maxCoord
         };
     },
     
     // 考虑变换的坐标转换函数
     transformedScreenToCieCoordinates(screenX, screenY, canvasWidth, canvasHeight) {
-        // 反向应用变换
+        // 考虑canvas的transform状态，先将鼠标坐标转换为canvas内部坐标
         const centerX = canvasWidth / 2;
         const centerY = canvasHeight / 2;
         
-        // 减去偏移
-        const adjustedX = screenX - this.transform.offsetX;
-        const adjustedY = screenY - this.transform.offsetY;
+        // 反向应用偏移
+        const offsetAdjustedX = screenX - this.transform.offsetX;
+        const offsetAdjustedY = screenY - this.transform.offsetY;
         
         // 相对于中心点的坐标
-        const relativeX = adjustedX - centerX;
-        const relativeY = adjustedY - centerY;
+        const relativeX = offsetAdjustedX - centerX;
+        const relativeY = offsetAdjustedY - centerY;
         
         // 反向缩放
         const unscaledX = relativeX / this.transform.scale + centerX;

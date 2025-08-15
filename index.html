@@ -143,44 +143,7 @@
                         </div>
                     </div>
                     
-                    <h2>RGB三基色坐标</h2>
-                    <div class="color-inputs">
-                        <div class="color-input red">
-                            <h3>红色 (R)</h3>
-                            <div class="input-group">
-                                <label>x坐标:</label>
-                                <input type="number" id="red-x2" step="0.0001" min="0" max="1" value="0.7">
-                            </div>
-                            <div class="input-group">
-                                <label>y坐标:</label>
-                                <input type="number" id="red-y2" step="0.0001" min="0" max="1" value="0.3">
-                            </div>
-                        </div>
-                        
-                        <div class="color-input green">
-                            <h3>绿色 (G)</h3>
-                            <div class="input-group">
-                                <label>x坐标:</label>
-                                <input type="number" id="green-x2" step="0.0001" min="0" max="1" value="0.2">
-                            </div>
-                            <div class="input-group">
-                                <label>y坐标:</label>
-                                <input type="number" id="green-y2" step="0.0001" min="0" max="1" value="0.7">
-                            </div>
-                        </div>
-                        
-                        <div class="color-input blue">
-                            <h3>蓝色 (B)</h3>
-                            <div class="input-group">
-                                <label>x坐标:</label>
-                                <input type="number" id="blue-x2" step="0.0001" min="0" max="1" value="0.1">
-                            </div>
-                            <div class="input-group">
-                                <label>y坐标:</label>
-                                <input type="number" id="blue-y2" step="0.0001" min="0" max="1" value="0.1">
-                            </div>
-                        </div>
-                    </div>
+                    <p class="mode-note">注意：RGB三基色坐标使用模式1中的设置，该模式专注于计算达到目标色所需的光通量</p>
                     
                     <button id="calculate-lv" class="calc-btn">计算所需光通量</button>
                     
@@ -202,18 +165,11 @@
                 </div>
                 
                 <div id="mode3" class="tab-content">
-                    <h2>RGB三基色设置</h2>
+                    <h2>最大光通量设置</h2>
+                    <p class="mode-note">RGB三基色坐标使用模式1中的设置，此处仅设置各基色的最大光通量</p>
                     <div class="color-inputs">
                         <div class="color-input red">
                             <h3>红色 (R)</h3>
-                            <div class="input-group">
-                                <label>x坐标:</label>
-                                <input type="number" id="red-x3" step="0.0001" min="0" max="1" value="0.7">
-                            </div>
-                            <div class="input-group">
-                                <label>y坐标:</label>
-                                <input type="number" id="red-y3" step="0.0001" min="0" max="1" value="0.3">
-                            </div>
                             <div class="input-group">
                                 <label>最大光通量:</label>
                                 <input type="number" id="red-max-lv" step="0.1" min="0" value="100">
@@ -223,14 +179,6 @@
                         <div class="color-input green">
                             <h3>绿色 (G)</h3>
                             <div class="input-group">
-                                <label>x坐标:</label>
-                                <input type="number" id="green-x3" step="0.0001" min="0" max="1" value="0.2">
-                            </div>
-                            <div class="input-group">
-                                <label>y坐标:</label>
-                                <input type="number" id="green-y3" step="0.0001" min="0" max="1" value="0.7">
-                            </div>
-                            <div class="input-group">
                                 <label>最大光通量:</label>
                                 <input type="number" id="green-max-lv" step="0.1" min="0" value="100">
                             </div>
@@ -239,31 +187,13 @@
                         <div class="color-input blue">
                             <h3>蓝色 (B)</h3>
                             <div class="input-group">
-                                <label>x坐标:</label>
-                                <input type="number" id="blue-x3" step="0.0001" min="0" max="1" value="0.1">
-                            </div>
-                            <div class="input-group">
-                                <label>y坐标:</label>
-                                <input type="number" id="blue-y3" step="0.0001" min="0" max="1" value="0.1">
-                            </div>
-                            <div class="input-group">
                                 <label>最大光通量:</label>
                                 <input type="number" id="blue-max-lv" step="0.1" min="0" value="100">
                             </div>
                         </div>
                     </div>
                     
-                    <h2>目标色设置</h2>
-                    <div class="target-color">
-                        <div class="input-group">
-                            <label>目标色 x 坐标:</label>
-                            <input type="number" id="target-x" step="0.0001" min="0" max="1" value="0.3333">
-                        </div>
-                        <div class="input-group">
-                            <label>目标色 y 坐标:</label>
-                            <input type="number" id="target-y" step="0.0001" min="0" max="1" value="0.3333">
-                        </div>
-                    </div>
+                    <p class="mode-note">注意：目标色坐标使用上方模式2中的设置</p>
                     
                     <button id="calculate-max-lv" class="calc-btn">计算最大光通量</button>
                     
