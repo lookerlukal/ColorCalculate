@@ -93,3 +93,14 @@ settings.local.json
 # 性能测试报告
 lighthouse-report.html
 performance-*.json
+
+# 临时图片和截图文件
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.webp
+*.svg
+2025_*.jpg
+2025_*.png
