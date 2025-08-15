@@ -80,10 +80,17 @@ colorPoints = {
 
 ## Git Management (AI Development)
 
-### Branch Strategy
+### ⚠️ MANDATORY BRANCH STRATEGY ⚠️
+
+**CRITICAL RULE: NEVER WORK DIRECTLY ON MAIN BRANCH**
+
+Before making ANY code changes, you MUST:
+1. Check current branch with `git branch`
+2. If on main, immediately create a new session branch
+3. Only then proceed with development
 
 **Main Branches**
-- `main` - Stable production version
+- `main` - Stable production version (READ ONLY for development)
 - `session/YYYY-MM-DD-feature` - AI development session branches
 - `backup/feature` - Backup branches before major refactoring
 
@@ -119,11 +126,20 @@ Files: Main modified files list
 
 ### AI Development Workflow
 
-**1. Session Start**
+**1. Session Start (MANDATORY)**
 ```bash
+# ALWAYS check current branch first
+git branch
+
+# If on main, IMMEDIATELY create session branch before ANY changes
 git checkout main
 git checkout -b session/$(date +%Y-%m-%d)-feature-name
+
+# Example:
+git checkout -b session/2025-08-15-bug-fix
 ```
+
+**⚠️ ENFORCEMENT: If you find yourself on main branch during development, STOP immediately and create a session branch**
 
 **2. During Development**
 - Commit immediately after completing independent functional modules

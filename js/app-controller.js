@@ -40,6 +40,7 @@ const ColorCalculatorApp = {
         this.state.colorPoints = { ...ColorCalculatorConfig.defaultColorPoints };
         this.state.sliderStepSize = ColorCalculatorConfig.slider.defaultStepSize;
         this.state.showGamutBoundaries = ColorCalculatorConfig.ui.showGamutBoundaries;
+        this.state.debugMode = false; // 调试模式，可通过控制台设置 ColorCalculatorApp.state.debugMode = true
     },
     
     // 缓存 DOM 元素
@@ -222,6 +223,13 @@ const ColorCalculatorApp = {
                 this.updateDisplay();
             }
             
+            // 调试模式开关 (D键)
+            if (e.key === 'd' || e.key === 'D') {
+                this.state.debugMode = !this.state.debugMode;
+                console.log('调试模式:', this.state.debugMode ? '开启' : '关闭');
+                this.updateDisplay();
+            }
+            
             // 步长控制
             if (e.key === 'Shift') {
                 this.state.sliderStepSize = 0.1;
@@ -317,6 +325,30 @@ const ColorCalculatorApp = {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
+        // 添加调试信息
+        if (this.state.debugMode) {
+            console.log('=== Mouse Debug Info ===');
+            console.log('Client coords:', e.clientX, e.clientY);
+            console.log('Canvas rect:', rect);
+            console.log('Relative coords:', x, y);
+            console.log('Canvas size (CSS):', rect.width, rect.height);
+            console.log('Canvas size (internal):', this.elements.canvas.width, this.elements.canvas.height);
+            console.log('Canvas size (config):', ColorCalculatorConfig.canvas.width, ColorCalculatorConfig.canvas.height);
+            console.log('DevicePixelRatio:', window.devicePixelRatio);
+            console.log('Scale factor:', ChartRenderer.getCanvasScaleFactor());
+            
+            // 测试各种坐标转换
+            const cieCoords1 = ChartRenderer.screenToCieCoordinates(x, y, 
+                ColorCalculatorConfig.canvas.width, ColorCalculatorConfig.canvas.height);
+            const cieCoords2 = ChartRenderer.transformedScreenToCieCoordinates(x, y,
+                ColorCalculatorConfig.canvas.width, ColorCalculatorConfig.canvas.height);
+                
+            console.log('CIE coords (normal):', cieCoords1);
+            console.log('CIE coords (transformed):', cieCoords2);
+            console.log('Transform state:', ChartRenderer.transform);
+            console.log('========================');
+        }
+        
         if (this.state.draggingPoint) {
             // 更新拖拽点的位置（使用考虑变换的坐标转换）
             const cieCoords = ChartRenderer.transformedScreenToCieCoordinates(x, y, 
@@ -336,6 +368,12 @@ const ColorCalculatorApp = {
             // 检查鼠标是否悬停在颜色点上
             const hoveredPoint = this.getClickedPoint(x, y);
             this.elements.canvas.style.cursor = hoveredPoint ? 'grab' : 'default';
+        }
+        
+        // 存储鼠标位置用于调试绘制
+        if (this.state.debugMode) {
+            this.state.mouseX = x;
+            this.state.mouseY = y;
         }
     },
     
@@ -554,6 +592,11 @@ const ColorCalculatorApp = {
     updateDisplay() {
         ChartRenderer.draw(this.state.colorPoints, this.state.activeMode, this.state.showGamutBoundaries);
         this.updateInputs();
+        
+        // 如果开启调试模式，绘制调试信息
+        if (this.state.debugMode && this.state.mouseX !== undefined && this.state.mouseY !== undefined) {
+            ChartRenderer.drawDebugInfo(this.state.mouseX, this.state.mouseY);
+        }
     }
 };
 
