@@ -19,6 +19,7 @@
                 <div class="tabs">
                     <button id="tab1" class="tab-btn active">模式1: 计算混合结果</button>
                     <button id="tab2" class="tab-btn">模式2: 计算光通量需求</button>
+                    <button id="tab3" class="tab-btn">模式3: 计算最大光通量</button>
                 </div>
                 
                 <div id="mode1" class="tab-content active">
@@ -187,6 +188,97 @@
                         <div class="result-item">
                             <span>蓝色所需光通量:</span>
                             <span id="blue-lv-result">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="mode3" class="tab-content">
+                    <h2>RGB三基色设置</h2>
+                    <div class="color-inputs">
+                        <div class="color-input red">
+                            <h3>红色 (R)</h3>
+                            <div class="input-group">
+                                <label>x坐标:</label>
+                                <input type="number" id="red-x3" step="0.0001" min="0" max="1" value="0.7">
+                            </div>
+                            <div class="input-group">
+                                <label>y坐标:</label>
+                                <input type="number" id="red-y3" step="0.0001" min="0" max="1" value="0.3">
+                            </div>
+                            <div class="input-group">
+                                <label>最大光通量:</label>
+                                <input type="number" id="red-max-lv" step="0.1" min="0" value="100">
+                            </div>
+                        </div>
+                        
+                        <div class="color-input green">
+                            <h3>绿色 (G)</h3>
+                            <div class="input-group">
+                                <label>x坐标:</label>
+                                <input type="number" id="green-x3" step="0.0001" min="0" max="1" value="0.2">
+                            </div>
+                            <div class="input-group">
+                                <label>y坐标:</label>
+                                <input type="number" id="green-y3" step="0.0001" min="0" max="1" value="0.7">
+                            </div>
+                            <div class="input-group">
+                                <label>最大光通量:</label>
+                                <input type="number" id="green-max-lv" step="0.1" min="0" value="100">
+                            </div>
+                        </div>
+                        
+                        <div class="color-input blue">
+                            <h3>蓝色 (B)</h3>
+                            <div class="input-group">
+                                <label>x坐标:</label>
+                                <input type="number" id="blue-x3" step="0.0001" min="0" max="1" value="0.1">
+                            </div>
+                            <div class="input-group">
+                                <label>y坐标:</label>
+                                <input type="number" id="blue-y3" step="0.0001" min="0" max="1" value="0.1">
+                            </div>
+                            <div class="input-group">
+                                <label>最大光通量:</label>
+                                <input type="number" id="blue-max-lv" step="0.1" min="0" value="100">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h2>目标色设置</h2>
+                    <div class="target-color">
+                        <div class="input-group">
+                            <label>目标色 x 坐标:</label>
+                            <input type="number" id="target-x3" step="0.0001" min="0" max="1" value="0.3333">
+                        </div>
+                        <div class="input-group">
+                            <label>目标色 y 坐标:</label>
+                            <input type="number" id="target-y3" step="0.0001" min="0" max="1" value="0.3333">
+                        </div>
+                    </div>
+                    
+                    <button id="calculate-max-lv" class="calc-btn">计算最大光通量</button>
+                    
+                    <div class="result">
+                        <h3>计算结果</h3>
+                        <div class="result-item">
+                            <span>最大可达光通量:</span>
+                            <span id="max-lv-result">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span>限制因子:</span>
+                            <span id="limiting-color">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span>红色使用量:</span>
+                            <span id="red-used-lv">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span>绿色使用量:</span>
+                            <span id="green-used-lv">-</span>
+                        </div>
+                        <div class="result-item">
+                            <span>蓝色使用量:</span>
+                            <span id="blue-used-lv">-</span>
                         </div>
                     </div>
                 </div>

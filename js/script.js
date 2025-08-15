@@ -5,6 +5,7 @@ const tab1 = document.getElementById('tab1');
 const tab2 = document.getElementById('tab2');
 const mode1 = document.getElementById('mode1');
 const mode2 = document.getElementById('mode2');
+const mode3 = document.getElementById('mode3');
 
 // 滑动条步长设置
 let sliderStepSize = 1.0; // 默认步长
@@ -361,10 +362,27 @@ function updateColorPointsFromInputs() {
         colorPoints.blue.y = parseFloat(document.getElementById('blue-y2').value) || colorPoints.blue.y;
     }
     
-    // 目标色
-    colorPoints.target.x = parseFloat(document.getElementById('target-x').value) || 0.3333;
-    colorPoints.target.y = parseFloat(document.getElementById('target-y').value) || 0.3333;
-    colorPoints.target.lv = parseFloat(document.getElementById('target-lv').value) || 30;
+    // 从模式3的输入框更新RGB坐标
+    if (activeMode === 'mode3') {
+        colorPoints.red.x = parseFloat(document.getElementById('red-x3').value) || colorPoints.red.x;
+        colorPoints.red.y = parseFloat(document.getElementById('red-y3').value) || colorPoints.red.y;
+        
+        colorPoints.green.x = parseFloat(document.getElementById('green-x3').value) || colorPoints.green.x;
+        colorPoints.green.y = parseFloat(document.getElementById('green-y3').value) || colorPoints.green.y;
+        
+        colorPoints.blue.x = parseFloat(document.getElementById('blue-x3').value) || colorPoints.blue.x;
+        colorPoints.blue.y = parseFloat(document.getElementById('blue-y3').value) || colorPoints.blue.y;
+        
+        colorPoints.target.x = parseFloat(document.getElementById('target-x3').value) || 0.3333;
+        colorPoints.target.y = parseFloat(document.getElementById('target-y3').value) || 0.3333;
+    }
+    
+    // 目标色（模式2）
+    if (activeMode !== 'mode3') {
+        colorPoints.target.x = parseFloat(document.getElementById('target-x').value) || 0.3333;
+        colorPoints.target.y = parseFloat(document.getElementById('target-y').value) || 0.3333;
+        colorPoints.target.lv = parseFloat(document.getElementById('target-lv').value) || 30;
+    }
     
     // 确保坐标在有效范围内
     colorPoints.red.x = Math.max(0, Math.min(1, colorPoints.red.x));
@@ -1297,6 +1315,19 @@ function updateInputFields() {
     document.getElementById('target-y').value = colorPoints.target.y.toFixed(4);
     document.getElementById('target-lv').value = colorPoints.target.lv.toFixed(1);
     
+    // 更新模式3中的输入框
+    document.getElementById('red-x3').value = colorPoints.red.x.toFixed(4);
+    document.getElementById('red-y3').value = colorPoints.red.y.toFixed(4);
+    
+    document.getElementById('green-x3').value = colorPoints.green.x.toFixed(4);
+    document.getElementById('green-y3').value = colorPoints.green.y.toFixed(4);
+    
+    document.getElementById('blue-x3').value = colorPoints.blue.x.toFixed(4);
+    document.getElementById('blue-y3').value = colorPoints.blue.y.toFixed(4);
+    
+    document.getElementById('target-x3').value = colorPoints.target.x.toFixed(4);
+    document.getElementById('target-y3').value = colorPoints.target.y.toFixed(4);
+    
     // 更新结果显示（如果有计算结果）
     if (colorPoints.mix.x > 0 || colorPoints.mix.y > 0) {
         document.getElementById('mix-x').textContent = colorPoints.mix.x.toFixed(4);
@@ -1685,6 +1716,7 @@ function setupEventListeners() {
     // 标签切换事件
     tab1.addEventListener('click', () => switchTab('mode1'));
     tab2.addEventListener('click', () => switchTab('mode2'));
+    tab3.addEventListener('click', () => switchTab('mode3'));
     
     // 点的拖拽事件
     canvas.addEventListener('mousedown', onMouseDown);
@@ -1716,6 +1748,7 @@ function setupEventListeners() {
     // 计算按钮
     document.getElementById('calculate-mix').addEventListener('click', calculateMixedColor);
     document.getElementById('calculate-lv').addEventListener('click', calculateRequiredLuminance);
+    document.getElementById('calculate-max-lv').addEventListener('click', calculateMaxLuminance);
 }
 
 // 用于记录最后选中的颜色点
@@ -1765,23 +1798,138 @@ function onKeyDown(e) {
     drawCIE1931Chart();
 }
 
+// 计算最大光通量
+function calculateMaxLuminance() {
+    // 读取RGB三基色坐标
+    const redX = parseFloat(document.getElementById('red-x3').value);
+    const redY = parseFloat(document.getElementById('red-y3').value);
+    const greenX = parseFloat(document.getElementById('green-x3').value);
+    const greenY = parseFloat(document.getElementById('green-y3').value);
+    const blueX = parseFloat(document.getElementById('blue-x3').value);
+    const blueY = parseFloat(document.getElementById('blue-y3').value);
+    
+    // 读取最大光通量限制
+    const redMaxLv = parseFloat(document.getElementById('red-max-lv').value);
+    const greenMaxLv = parseFloat(document.getElementById('green-max-lv').value);
+    const blueMaxLv = parseFloat(document.getElementById('blue-max-lv').value);
+    
+    // 读取目标色坐标
+    const targetX = parseFloat(document.getElementById('target-x3').value);
+    const targetY = parseFloat(document.getElementById('target-y3').value);
+    
+    // 检查y坐标是否为0，防止除零错误
+    if (redY <= 0 || greenY <= 0 || blueY <= 0 || targetY <= 0) {
+        alert('错误：y坐标不能为0，请调整色坐标！');
+        return;
+    }
+    
+    // 计算z坐标
+    const redZ = 1 - redX - redY;
+    const greenZ = 1 - greenX - greenY;
+    const blueZ = 1 - blueX - blueY;
+    const targetZ = 1 - targetX - targetY;
+    
+    // 构建系数矩阵（与模式2相同）
+    const coeffMatrix = [
+        [redX/redY, greenX/greenY, blueX/blueY],
+        [1, 1, 1],
+        [redZ/redY, greenZ/greenY, blueZ/blueY]
+    ];
+    
+    // 假设总光通量为1，计算各基色的比例
+    const targetVector = [
+        targetX/targetY,
+        1,
+        targetZ/targetY
+    ];
+    
+    try {
+        // 求解线性方程组，得到各基色的比例
+        const ratios = solveLinearEquation(coeffMatrix, targetVector);
+        
+        // 检查是否有负值（目标色在RGB三角形外）
+        if (ratios[0] < 0 || ratios[1] < 0 || ratios[2] < 0) {
+            alert('错误：目标颜色在RGB三角形外部，无法通过三基色合成!');
+            document.getElementById('max-lv-result').textContent = '无法合成';
+            document.getElementById('limiting-color').textContent = '-';
+            document.getElementById('red-used-lv').textContent = '-';
+            document.getElementById('green-used-lv').textContent = '-';
+            document.getElementById('blue-used-lv').textContent = '-';
+            return;
+        }
+        
+        // 计算缩放因子（找出哪个基色会先达到上限）
+        const scaleFactors = [
+            redMaxLv / ratios[0],
+            greenMaxLv / ratios[1],
+            blueMaxLv / ratios[2]
+        ];
+        
+        // 找出最小的缩放因子（限制因子）
+        let minScale = Math.min(...scaleFactors);
+        let limitingIndex = scaleFactors.indexOf(minScale);
+        let limitingColor = ['红色', '绿色', '蓝色'][limitingIndex];
+        
+        // 计算最大光通量
+        const maxTotalLv = minScale;
+        
+        // 计算各基色的实际使用量
+        const redUsed = ratios[0] * minScale;
+        const greenUsed = ratios[1] * minScale;
+        const blueUsed = ratios[2] * minScale;
+        
+        // 显示结果
+        document.getElementById('max-lv-result').textContent = maxTotalLv.toFixed(2);
+        document.getElementById('limiting-color').textContent = limitingColor;
+        document.getElementById('red-used-lv').textContent = redUsed.toFixed(2) + ' / ' + redMaxLv.toFixed(2);
+        document.getElementById('green-used-lv').textContent = greenUsed.toFixed(2) + ' / ' + greenMaxLv.toFixed(2);
+        document.getElementById('blue-used-lv').textContent = blueUsed.toFixed(2) + ' / ' + blueMaxLv.toFixed(2);
+        
+        // 更新颜色点以在图表上显示
+        colorPoints.red.x = redX;
+        colorPoints.red.y = redY;
+        colorPoints.green.x = greenX;
+        colorPoints.green.y = greenY;
+        colorPoints.blue.x = blueX;
+        colorPoints.blue.y = blueY;
+        colorPoints.target.x = targetX;
+        colorPoints.target.y = targetY;
+        colorPoints.target.lv = maxTotalLv;
+        
+        // 重绘图表
+        drawCIE1931Chart();
+        
+    } catch (error) {
+        console.error('计算错误:', error);
+        alert('计算错误：无法求解方程组，请检查输入数据!');
+    }
+}
+
 // 切换标签页
 function switchTab(mode) {
+    // 移除所有激活状态
+    tab1.classList.remove('active');
+    tab2.classList.remove('active');
+    tab3.classList.remove('active');
+    mode1.classList.remove('active');
+    mode2.classList.remove('active');
+    mode3.classList.remove('active');
+    
+    // 添加对应的激活状态
     if (mode === 'mode1') {
         tab1.classList.add('active');
-        tab2.classList.remove('active');
         mode1.classList.add('active');
-        mode2.classList.remove('active');
-    } else {
-        tab1.classList.remove('active');
+    } else if (mode === 'mode2') {
         tab2.classList.add('active');
-        mode1.classList.remove('active');
         mode2.classList.add('active');
+    } else if (mode === 'mode3') {
+        tab3.classList.add('active');
+        mode3.classList.add('active');
     }
     
     activeMode = mode;
     
-    // 确保两个模式之间的数据同步
+    // 确保模式之间的数据同步
     updateColorPointsFromInputs();
     updateInputFields();
     
