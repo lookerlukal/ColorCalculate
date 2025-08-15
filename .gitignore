@@ -1,0 +1,95 @@
+# 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+
+# IDE 和编辑器配置文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志和调试文件
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage 目录
+lib-cov
+coverage/
+*.lcov
+
+# 依赖目录（以防未来添加构建工具）
+node_modules/
+npm/
+yarn.lock
+package-lock.json
+
+# 构建输出（以防未来需要）
+dist/
+build/
+out/
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 本地测试文件
+test-*.html
+demo-*.html
+sandbox/
+playground/
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 压缩文件
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# 开发工具生成的文件
+.nyc_output
+.grunt
+bower_components
+
+# 浏览器测试
+.phantom/
+
+# 本地配置文件
+config.local.js
+settings.local.json
+
+# 部署相关
+.deploy/
+.publish/
+
+# 性能测试报告
+lighthouse-report.html
+performance-*.json

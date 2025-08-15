@@ -2,91 +2,168 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 项目概述
+## Project Overview
 
-这是一个基于 CIE1931 色度图的 RGB 三基色合成计算器，纯前端实现，无需构建工具。
+A CIE1931 chromaticity-based RGB color mixing calculator. Pure frontend implementation, no build tools required.
 
-## 开发环境
+## Development Environment
 
-- 纯静态网页项目，直接在浏览器中打开 `index.html` 即可运行
-- 无需构建、编译或安装依赖
-- 兼容现代浏览器（支持 Canvas API）
+- Static web project, run by opening `index.html` in browser
+- No build, compilation, or dependency installation required
+- Compatible with modern browsers (Canvas API support required)
 
-## 代码架构
+## Code Architecture
 
-### 核心文件结构
+### Core Files
 
-1. **index.html** - 主页面，包含两种计算模式的 UI 布局
-2. **js/script.js** - 主要业务逻辑（约 1900 行）
-   - CIE1931 色度图绘制
-   - 颜色点交互（拖拽、点击）
-   - 色彩计算（混合计算、光通量计算）
-   - 预设管理系统
-   - 键盘快捷键处理
-3. **js/debug.js** - 调试相关功能
-4. **css/style.css** - 样式定义
+1. **index.html** - Main page with UI for multiple calculation modes
+2. **js/** - Modularized JavaScript architecture:
+   - **config.js** - Configuration and constants (95 lines)
+   - **notification.js** - Error handling and notifications (150 lines) 
+   - **color-calculator.js** - Color calculation algorithms (217 lines)
+   - **chart-renderer.js** - CIE1931 chart rendering (344 lines)
+   - **app-controller.js** - Main application controller (407 lines)
+   - **script.js** - Compatibility layer and presets (194 lines)
+3. **js/debug.js** - Debug utilities
+4. **css/style.css** - Styling
 
-### 主要功能模块
+### Key Functions
 
-1. **CIE1931 色度图可视化**
-   - `drawCIE1931Chart()` - 主绘制函数
-   - 包含光谱轨迹、网格、色域边界显示
-   - 支持拖拽交互和实时更新
+1. **CIE1931 Visualization**
+   - `drawCIE1931Chart()` - Main rendering function
+   - Spectral locus, grid, gamut boundary display
+   - Drag interaction and real-time updates
 
-2. **色彩计算核心**
-   - `calculateMixedColor()` - 模式1：计算 RGB 混合结果
-   - `calculateRequiredLuminance()` - 模式2：计算达到目标色所需的光通量
-   - `calculateMaxLuminance()` - 模式3：计算目标色的最大可达光通量
-   - `solveLinearEquation()` - 线性方程求解器（用于光通量计算）
+2. **Color Calculation Core**
+   - `calculateMixedColor()` - Mode 1: RGB mixing results
+   - `calculateRequiredLuminance()` - Mode 2: Required luminance for target color
+   - `calculateMaxLuminance()` - Mode 3: Maximum achievable luminance
+   - `solveLinearEquation()` - Linear equation solver for luminance calculations
 
-3. **交互系统**
-   - 鼠标事件：`onMouseDown`, `onMouseMove`, `onMouseUp`
-   - 键盘快捷键：`onKeyDown`
-   - 支持点拖拽、滑块调节、步长控制
+3. **Interaction System**
+   - Mouse events: `onMouseDown`, `onMouseMove`, `onMouseUp`
+   - Keyboard shortcuts: `onKeyDown`
+   - Point dragging, slider adjustment, step control
 
-4. **预设管理**
-   - 使用 localStorage 存储预设数据
-   - 支持保存、加载、删除预设
-   - 内置多个默认预设
+4. **Preset Management**
+   - localStorage for preset data storage
+   - Save, load, delete presets
+   - Multiple built-in default presets
 
-### 关键数据结构
+### Key Data Structure
 
 ```javascript
 colorPoints = {
-    red: { x, y, lv },    // 红色基色
-    green: { x, y, lv },  // 绿色基色
-    blue: { x, y, lv },   // 蓝色基色
-    target: { x, y, lv }, // 目标色（模式2）
-    mix: { x, y, lv }     // 混合结果（模式1）
+    red: { x, y, lv },    // Red primary
+    green: { x, y, lv },  // Green primary
+    blue: { x, y, lv },   // Blue primary
+    target: { x, y, lv }, // Target color (Mode 2)
+    mix: { x, y, lv }     // Mixed result (Mode 1)
 }
 ```
 
-### 坐标系统
+### Coordinate System
 
-- CIE 坐标范围：x, y ∈ [0, 1]
-- Canvas 坐标需要转换：
-  - `screenToCieCoordinates()` - 屏幕坐标转 CIE 坐标
-  - `getCanvasScaleFactor()` - 处理高 DPI 屏幕
+- CIE coordinates range: x, y ∈ [0, 1]
+- Canvas coordinate conversion:
+  - `screenToCieCoordinates()` - Screen to CIE coordinates
+  - `getCanvasScaleFactor()` - Handle high DPI screens
 
-## 开发建议
+## Development Guidelines
 
-1. **调试方法**
-   - 直接在浏览器开发者工具中调试
-   - `debug.js` 提供了辅助调试功能
+1. **Debugging**: Use browser developer tools, `debug.js` provides utilities
+2. **Code Architecture**: Modular design with separation of concerns:
+   - Configuration management, error handling, calculations, rendering, and application control are separated
+   - Improved maintainability and testability
+3. **Performance**: Optimized rendering with background caching, efficient coordinate transformations, and throttled updates
+4. **Browser Compatibility**: Requires Canvas API and localStorage support
 
-2. **代码优化建议**
-   - script.js 文件较大（1900+ 行），可考虑模块化拆分
-   - 建议拆分为：
-     - chart-renderer.js（图表绘制）
-     - color-calculator.js（颜色计算）
-     - interaction-handler.js（交互处理）
-     - preset-manager.js（预设管理）
+## Git Management (AI Development)
 
-3. **性能注意事项**
-   - Canvas 重绘频繁，注意优化绘制性能
-   - 鼠标拖拽时使用节流处理
+### Branch Strategy
 
-4. **浏览器兼容性**
-   - 需要支持 Canvas API
-   - 使用了 localStorage API
-   - 建议在 Chrome、Firefox、Edge 等现代浏览器中运行
+**Main Branches**
+- `main` - Stable production version
+- `session/YYYY-MM-DD-feature` - AI development session branches
+- `backup/feature` - Backup branches before major refactoring
+
+**Naming Convention**
+```bash
+session/2025-01-15-color-mixing      # Color mixing feature development
+session/2025-01-16-ui-optimization   # UI optimization session
+backup/before-script-refactor        # Pre-refactor backup
+```
+
+### Commit Standards
+
+**Commit Message Format**
+```
+[AI] type: Brief description
+
+- Specific change 1
+- Specific change 2
+- Specific change 3
+
+Session: 2025-01-15
+Context: User requirement summary
+Files: Main modified files list
+```
+
+**Commit Types**
+- `feat` - New feature
+- `fix` - Bug fix
+- `refactor` - Code refactoring
+- `style` - Style adjustment
+- `perf` - Performance optimization
+- `docs` - Documentation update
+
+### AI Development Workflow
+
+**1. Session Start**
+```bash
+git checkout main
+git checkout -b session/$(date +%Y-%m-%d)-feature-name
+```
+
+**2. During Development**
+- Commit immediately after completing independent functional modules
+- Intermediate commits for single file changes over 300 lines
+- Create backup branches before major architectural adjustments
+
+**3. Session End**
+```bash
+git checkout main
+git merge --no-ff session/branch-name
+git tag -a "v$(date +%Y%m%d)" -m "AI session: feature description"
+git branch -d session/branch-name  # Optional
+```
+
+### Quality Control
+
+**Pre-commit Checklist**
+- [ ] Code functions completely and runs
+- [ ] Single files under 1300 lines (split if exceeded)
+- [ ] Browser testing shows basic functionality works
+- [ ] Commit message includes necessary context
+
+**Rollback Strategy**
+- Keep AI session branches for at least 1 week
+- Use Git tags for important versions
+- Maintain `backup/` branches for emergency recovery
+
+**Change Management**
+- Limit single session code changes to 500 lines
+- Step-by-step commits for cross-file refactoring
+- Separate new features from bug fixes
+
+### AI Collaboration
+
+**Session Continuity**
+- Record current development status in CLAUDE.md
+- Document important decisions and architectural choices
+- Clearly mark incomplete TODO items
+
+**Version Management**
+- Use semantic versioning: `v1.0.0`
+- Tag major feature releases
+- Use pre-release tags for experimental features: `v1.1.0-beta`

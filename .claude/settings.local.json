@@ -6,7 +6,8 @@
       "Bash(explorer:*)",
       "Bash(del nul)",
       "Bash(rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }
