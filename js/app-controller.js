@@ -77,6 +77,7 @@ const ColorCalculatorApp = {
                 x: document.getElementById(`${color}-x`),
                 y: document.getElementById(`${color}-y`),
                 lv: document.getElementById(`${color}-lv`),
+                maxLv: document.getElementById(`${color}-max-lv`), // 模式3的最大光通量
                 presets: document.getElementById(`${color}-presets`),
                 saveBtn: document.getElementById(`save-${color}-preset`)
             };
@@ -192,6 +193,15 @@ const ColorCalculatorApp = {
                     });
                 }
             });
+            
+            // 为模式3的最大光通量输入框添加事件监听
+            if (inputs.maxLv) {
+                inputs.maxLv.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    Logger.debug(`最大光通量变化: ${color}.maxLv = ${value}`, 'InputHandler');
+                    this.handleMaxLvChange(color, value);
+                });
+            }
         });
         
     },
@@ -422,6 +432,34 @@ const ColorCalculatorApp = {
         }
     },
     
+    // 处理模式3最大光通量变化
+    handleMaxLvChange(color, value) {
+        if (isNaN(value) || value < 0) return;
+        
+        // 仅在模式3时重新计算
+        if (this.state.activeMode === 'mode3') {
+            this.performCalculation();
+            this.updateDisplay();
+        }
+    },
+    
+    // 获取界面上的最大光通量值
+    getMaxLvValues() {
+        const maxLvValues = {};
+        const colors = ['red', 'green', 'blue'];
+        
+        colors.forEach(color => {
+            const input = this.elements.inputs[color]?.maxLv;
+            if (input) {
+                maxLvValues[color] = parseFloat(input.value) || ColorCalculatorConfig.slider.maxLvValues[color] || 100;
+            } else {
+                maxLvValues[color] = ColorCalculatorConfig.slider.maxLvValues[color] || 100;
+            }
+        });
+        
+        return maxLvValues;
+    },
+    
     // 执行计算
     performCalculation() {
         try {
@@ -436,7 +474,9 @@ const ColorCalculatorApp = {
                 this.updateMode2Results(required);
                 Logger.info(`模式2计算完成: R=${required.red.toFixed(1)}, G=${required.green.toFixed(1)}, B=${required.blue.toFixed(1)}`, 'Calculator');
             } else if (this.state.activeMode === 'mode3') {
-                const maxResult = ColorCalculator.calculateMaxLuminance(this.state.colorPoints);
+                // 获取界面上的最大光通量值
+                const maxLvValues = this.getMaxLvValues();
+                const maxResult = ColorCalculator.calculateMaxLuminance(this.state.colorPoints, maxLvValues);
                 this.updateMode3Results(maxResult);
                 Logger.info(`模式3计算完成: 最大光通量=${maxResult.maxLuminance.toFixed(1)}`, 'Calculator');
             }

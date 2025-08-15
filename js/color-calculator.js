@@ -76,7 +76,7 @@ const ColorCalculator = {
     },
     
     // 计算目标色的最大可达光通量 (模式3)
-    calculateMaxLuminance(colorPoints) {
+    calculateMaxLuminance(colorPoints, maxLvValues = null) {
         try {
             const { red, green, blue, target } = colorPoints;
             
@@ -91,8 +91,8 @@ const ColorCalculator = {
                 return { maxLuminance: 0, ratio: { red: 0, green: 0, blue: 0 } };
             }
             
-            // 使用各种光通量组合尝试找到最大值
-            const maxLvValues = ColorCalculatorConfig.slider.maxLvValues;
+            // 使用传入的最大光通量值，如果没有则使用配置文件中的默认值
+            const maxLv = maxLvValues || ColorCalculatorConfig.slider.maxLvValues;
             let maxLuminance = 0;
             let bestRatio = { red: 0, green: 0, blue: 0 };
             
@@ -101,9 +101,9 @@ const ColorCalculator = {
             for (let rStep = 0; rStep <= steps; rStep++) {
                 for (let gStep = 0; gStep <= steps; gStep++) {
                     for (let bStep = 0; bStep <= steps; bStep++) {
-                        const testRed = { ...red, lv: (rStep / steps) * maxLvValues.red };
-                        const testGreen = { ...green, lv: (gStep / steps) * maxLvValues.green };
-                        const testBlue = { ...blue, lv: (bStep / steps) * maxLvValues.blue };
+                        const testRed = { ...red, lv: (rStep / steps) * maxLv.red };
+                        const testGreen = { ...green, lv: (gStep / steps) * maxLv.green };
+                        const testBlue = { ...blue, lv: (bStep / steps) * maxLv.blue };
                         
                         const mixResult = this.calculateMixedColor({
                             red: testRed,
