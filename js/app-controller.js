@@ -26,6 +26,7 @@ const ColorCalculatorApp = {
             this.cacheElements();
             this.initializeModules();
             this.bindEvents();
+            this.performCalculation(); // 初始化时执行一次计算
             this.updateDisplay();
             
             NotificationSystem.success('色彩计算器初始化完成');
@@ -81,7 +82,7 @@ const ColorCalculatorApp = {
             };
         });
         
-        // 目标色输入（模式2和3）
+        // 目标色输入（模式2和3共享）
         this.elements.inputs.target = {
             x: document.getElementById('target-x'),
             y: document.getElementById('target-y'),
@@ -139,6 +140,19 @@ const ColorCalculatorApp = {
         // 键盘事件
         this.bindKeyboardEvents();
         
+        // 色域显示开关
+        const gamutToggle = document.getElementById('show-gamut');
+        if (gamutToggle) {
+            gamutToggle.addEventListener('change', (e) => {
+                this.state.showGamutBoundaries = e.target.checked;
+                Logger.info(`色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+                this.updateDisplay();
+            });
+        }
+        
+        // 计算按钮事件绑定
+        this.bindCalculationButtons();
+        
         // 窗口大小改变事件
         window.addEventListener('resize', () => {
             ChartRenderer.invalidateCache();
@@ -153,6 +167,9 @@ const ColorCalculatorApp = {
         canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        
+        // 缩放功能（鼠标滚轮）
+        canvas.addEventListener('wheel', (e) => this.handleWheel(e));
         
         // 防止右键菜单
         canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -169,11 +186,14 @@ const ColorCalculatorApp = {
             ['x', 'y', 'lv'].forEach(property => {
                 if (inputs[property]) {
                     inputs[property].addEventListener('input', (e) => {
-                        this.handleInputChange(color, property, parseFloat(e.target.value));
+                        const value = parseFloat(e.target.value);
+                        Logger.debug(`输入变化: ${color}.${property} = ${value}`, 'InputHandler');
+                        this.handleInputChange(color, property, value);
                     });
                 }
             });
         });
+        
     },
     
     // 绑定键盘事件
@@ -182,6 +202,13 @@ const ColorCalculatorApp = {
             if (e.key === 'Escape') {
                 this.state.draggingPoint = null;
                 this.state.draggingSlider = null;
+                this.updateDisplay();
+            }
+            
+            // 重置缩放 (R键)
+            if (e.key === 'r' || e.key === 'R') {
+                ChartRenderer.resetTransform();
+                ChartRenderer.invalidateCache();
                 this.updateDisplay();
             }
             
@@ -198,6 +225,39 @@ const ColorCalculatorApp = {
                 this.state.sliderStepSize = ColorCalculatorConfig.slider.defaultStepSize;
             }
         });
+    },
+    
+    // 绑定计算按钮事件
+    bindCalculationButtons() {
+        // 模式1计算按钮
+        const calcMixBtn = document.getElementById('calculate-mix');
+        if (calcMixBtn) {
+            calcMixBtn.addEventListener('click', () => {
+                Logger.info('手动触发模式1计算', 'UI');
+                this.performCalculation();
+                this.updateDisplay();
+            });
+        }
+        
+        // 模式2计算按钮
+        const calcLvBtn = document.getElementById('calculate-lv');
+        if (calcLvBtn) {
+            calcLvBtn.addEventListener('click', () => {
+                Logger.info('手动触发模式2计算', 'UI');
+                this.performCalculation();
+                this.updateDisplay();
+            });
+        }
+        
+        // 模式3计算按钮
+        const calcMaxLvBtn = document.getElementById('calculate-max-lv');
+        if (calcMaxLvBtn) {
+            calcMaxLvBtn.addEventListener('click', () => {
+                Logger.info('手动触发模式3计算', 'UI');
+                this.performCalculation();
+                this.updateDisplay();
+            });
+        }
     },
     
     // 切换计算模式
@@ -245,8 +305,8 @@ const ColorCalculatorApp = {
         const y = e.clientY - rect.top;
         
         if (this.state.draggingPoint) {
-            // 更新拖拽点的位置
-            const cieCoords = ChartRenderer.screenToCieCoordinates(x, y, 
+            // 更新拖拽点的位置（使用考虑变换的坐标转换）
+            const cieCoords = ChartRenderer.transformedScreenToCieCoordinates(x, y, 
                 ColorCalculatorConfig.canvas.width, ColorCalculatorConfig.canvas.height);
             
             // 限制坐标范围
@@ -272,6 +332,44 @@ const ColorCalculatorApp = {
         this.elements.canvas.style.cursor = 'default';
     },
     
+    // 处理鼠标滚轮缩放
+    handleWheel(e) {
+        e.preventDefault();
+        
+        const rect = this.elements.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        const scaleFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        const newScale = ChartRenderer.transform.scale * scaleFactor;
+        
+        // 限制缩放范围
+        if (newScale < ChartRenderer.transform.minScale || newScale > ChartRenderer.transform.maxScale) {
+            return;
+        }
+        
+        // 计算缩放中心点
+        const config = ColorCalculatorConfig.canvas;
+        const centerX = config.width / 2;
+        const centerY = config.height / 2;
+        
+        // 更新缩放和偏移
+        ChartRenderer.transform.scale = newScale;
+        
+        // 以鼠标位置为中心进行缩放
+        const deltaX = (mouseX - centerX) * (scaleFactor - 1);
+        const deltaY = (mouseY - centerY) * (scaleFactor - 1);
+        
+        ChartRenderer.transform.offsetX -= deltaX;
+        ChartRenderer.transform.offsetY -= deltaY;
+        
+        Logger.debug(`缩放: scale=${newScale.toFixed(2)}, offset=(${ChartRenderer.transform.offsetX.toFixed(1)}, ${ChartRenderer.transform.offsetY.toFixed(1)})`, 'ZoomHandler');
+        
+        // 重新渲染
+        ChartRenderer.invalidateCache();
+        this.updateDisplay();
+    },
+    
     // 获取被点击的颜色点
     getClickedPoint(screenX, screenY) {
         const config = ColorCalculatorConfig;
@@ -288,7 +386,7 @@ const ColorCalculatorApp = {
             if (pointName === 'mix' && this.state.activeMode !== 'mode1') continue;
             
             const point = this.state.colorPoints[pointName];
-            const screenCoords = ChartRenderer.cieToScreenCoordinates(
+            const screenCoords = ChartRenderer.transformedCieToScreenCoordinates(
                 point.x, point.y, config.canvas.width, config.canvas.height);
             
             const distance = Math.sqrt(
@@ -327,17 +425,23 @@ const ColorCalculatorApp = {
     // 执行计算
     performCalculation() {
         try {
+            Logger.debug(`开始${this.state.activeMode}计算`, 'Calculator');
+            
             if (this.state.activeMode === 'mode1') {
                 const mixResult = ColorCalculator.calculateMixedColor(this.state.colorPoints);
                 this.state.colorPoints.mix = mixResult;
+                Logger.info(`模式1计算完成: 混合色(${mixResult.x.toFixed(4)}, ${mixResult.y.toFixed(4)}, ${mixResult.lv.toFixed(1)})`, 'Calculator');
             } else if (this.state.activeMode === 'mode2') {
                 const required = ColorCalculator.calculateRequiredLuminance(this.state.colorPoints);
                 this.updateMode2Results(required);
+                Logger.info(`模式2计算完成: R=${required.red.toFixed(1)}, G=${required.green.toFixed(1)}, B=${required.blue.toFixed(1)}`, 'Calculator');
             } else if (this.state.activeMode === 'mode3') {
                 const maxResult = ColorCalculator.calculateMaxLuminance(this.state.colorPoints);
                 this.updateMode3Results(maxResult);
+                Logger.info(`模式3计算完成: 最大光通量=${maxResult.maxLuminance.toFixed(1)}`, 'Calculator');
             }
         } catch (error) {
+            Logger.error(`计算失败: ${error.message}`, 'Calculator');
             ErrorHandler.handle(error, 'Calculation');
         }
     },

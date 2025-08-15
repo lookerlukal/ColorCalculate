@@ -5,6 +5,15 @@ const ChartRenderer = {
     imageCache: null, // 缓存背景图像
     needsRedraw: true,
     
+    // 缩放和平移相关
+    transform: {
+        scale: 1.0,
+        offsetX: 0,
+        offsetY: 0,
+        minScale: 0.5,
+        maxScale: 5.0
+    },
+    
     init(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
@@ -57,6 +66,12 @@ const ChartRenderer = {
         // 清空画布
         this.ctx.clearRect(0, 0, config.width, config.height);
         
+        // 应用变换
+        this.ctx.save();
+        this.ctx.translate(config.width / 2 + this.transform.offsetX, config.height / 2 + this.transform.offsetY);
+        this.ctx.scale(this.transform.scale, this.transform.scale);
+        this.ctx.translate(-config.width / 2, -config.height / 2);
+        
         // 绘制缓存的背景
         if (this.imageCache) {
             this.ctx.drawImage(this.imageCache, 0, 0);
@@ -75,27 +90,40 @@ const ChartRenderer = {
         if (typeof debugTool !== 'undefined' && debugTool.active) {
             debugTool.drawDebugVisuals(this.ctx, 0, 0, config.width, config.height);
         }
+        
+        // 恢复变换
+        this.ctx.restore();
+        
+        // 绘制缩放信息
+        this.drawZoomInfo();
     },
     
     // 绘制色度图背景色彩
     drawChromaticityBackground(ctx, width, height) {
-        const resolution = 100; // 降低分辨率提高性能
+        const resolution = 300; // 提高分辨率减少锯齿
         const imageData = ctx.createImageData(width, height);
         const data = imageData.data;
         
-        for (let y = 0; y < height; y += Math.ceil(height / resolution)) {
-            for (let x = 0; x < width; x += Math.ceil(width / resolution)) {
-                const cieCoords = this.screenToCieCoordinates(x, y, width, height);
+        // 使用更精细的采样来减少锯齿
+        const stepY = height / resolution;
+        const stepX = width / resolution;
+        
+        for (let y = 0; y < height; y += stepY) {
+            for (let x = 0; x < width; x += stepX) {
+                const actualY = Math.floor(y);
+                const actualX = Math.floor(x);
+                const cieCoords = this.screenToCieCoordinates(actualX, actualY, width, height);
                 
                 if (this.isInsideSpectralLocus(cieCoords)) {
                     const rgb = this.xyToRGB(cieCoords.x, cieCoords.y);
-                    const pixelIndex = (y * width + x) * 4;
                     
-                    // 填充周围像素（降低分辨率的补偿）
-                    const blockSize = Math.ceil(width / resolution);
-                    for (let dy = 0; dy < blockSize && y + dy < height; dy++) {
-                        for (let dx = 0; dx < blockSize && x + dx < width; dx++) {
-                            const idx = ((y + dy) * width + (x + dx)) * 4;
+                    // 使用双线性插值填充像素块以减少锯齿
+                    const blockSizeX = Math.ceil(stepX);
+                    const blockSizeY = Math.ceil(stepY);
+                    
+                    for (let dy = 0; dy < blockSizeY && actualY + dy < height; dy++) {
+                        for (let dx = 0; dx < blockSizeX && actualX + dx < width; dx++) {
+                            const idx = ((actualY + dy) * width + (actualX + dx)) * 4;
                             if (idx < data.length) {
                                 data[idx] = rgb.r;
                                 data[idx + 1] = rgb.g;
@@ -299,6 +327,52 @@ const ChartRenderer = {
         };
     },
     
+    // 考虑变换的坐标转换函数
+    transformedScreenToCieCoordinates(screenX, screenY, canvasWidth, canvasHeight) {
+        // 反向应用变换
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
+        
+        // 减去偏移
+        const adjustedX = screenX - this.transform.offsetX;
+        const adjustedY = screenY - this.transform.offsetY;
+        
+        // 相对于中心点的坐标
+        const relativeX = adjustedX - centerX;
+        const relativeY = adjustedY - centerY;
+        
+        // 反向缩放
+        const unscaledX = relativeX / this.transform.scale + centerX;
+        const unscaledY = relativeY / this.transform.scale + centerY;
+        
+        // 转换为CIE坐标
+        return this.screenToCieCoordinates(unscaledX, unscaledY, canvasWidth, canvasHeight);
+    },
+    
+    // 考虑变换的CIE到屏幕坐标转换
+    transformedCieToScreenCoordinates(cieX, cieY, canvasWidth, canvasHeight) {
+        // 首先转换为基础屏幕坐标
+        const baseScreen = this.cieToScreenCoordinates(cieX, cieY, canvasWidth, canvasHeight);
+        
+        // 应用变换
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
+        
+        // 相对于中心点的坐标
+        const relativeX = baseScreen.x - centerX;
+        const relativeY = baseScreen.y - centerY;
+        
+        // 缩放
+        const scaledX = relativeX * this.transform.scale;
+        const scaledY = relativeY * this.transform.scale;
+        
+        // 加上偏移和中心点
+        return {
+            x: scaledX + centerX + this.transform.offsetX,
+            y: scaledY + centerY + this.transform.offsetY
+        };
+    },
+    
     // 检查点是否在光谱轨迹内
     isInsideSpectralLocus(point) {
         // 使用射线法判断点是否在多边形内
@@ -335,6 +409,38 @@ const ChartRenderer = {
             g: Math.max(0, Math.min(255, Math.round(g * 255))),
             b: Math.max(0, Math.min(255, Math.round(b * 255)))
         };
+    },
+    
+    // 绘制缩放信息
+    drawZoomInfo() {
+        if (this.transform.scale === 1.0 && this.transform.offsetX === 0 && this.transform.offsetY === 0) {
+            return; // 默认状态不显示
+        }
+        
+        this.ctx.save();
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.font = '12px sans-serif';
+        this.ctx.textAlign = 'left';
+        
+        const info = `缩放: ${(this.transform.scale * 100).toFixed(0)}%`;
+        const textWidth = this.ctx.measureText(info).width;
+        
+        // 绘制背景
+        this.ctx.fillRect(10, 10, textWidth + 20, 25);
+        
+        // 绘制文字
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillText(info, 20, 27);
+        
+        this.ctx.restore();
+    },
+    
+    // 重置缩放和平移
+    resetTransform() {
+        this.transform.scale = 1.0;
+        this.transform.offsetX = 0;
+        this.transform.offsetY = 0;
+        Logger.info('重置缩放和平移', 'ChartRenderer');
     },
     
     // 强制重新绘制背景（当配置改变时调用）
