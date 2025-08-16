@@ -34,6 +34,12 @@ const ColorCalculatorApp = {
             ErrorHandler.handle(error, 'App initialization');
         }
     },
+
+    // 根据配置格式化数值显示
+    formatValue(value, type = 'luminance') {
+        const precision = ColorCalculatorConfig.precision.display[type];
+        return Number(value).toFixed(precision);
+    },
     
     // 初始化应用状态
     initializeState() {
@@ -568,7 +574,7 @@ const ColorCalculatorApp = {
             if (this.state.activeMode === 'mode1') {
                 const mixResult = ColorCalculator.calculateMixedColor(this.state.colorPoints);
                 this.state.colorPoints.mix = mixResult;
-                Logger.info(`模式1计算完成: 混合色(${mixResult.x.toFixed(4)}, ${mixResult.y.toFixed(4)}, ${mixResult.lv.toFixed(1)})`, 'Calculator');
+                Logger.info(`模式1计算完成: 混合色(${this.formatValue(mixResult.x, 'coordinate')}, ${this.formatValue(mixResult.y, 'coordinate')}, ${this.formatValue(mixResult.lv)})`, 'Calculator');
             } else if (this.state.activeMode === 'mode2') {
                 // 模式2: 目标色导入 - 主要用于Excel数据导入和目标色设置，无需特殊计算
                 Logger.info('模式2: 目标色导入模式', 'Calculator');
@@ -581,7 +587,7 @@ const ColorCalculatorApp = {
                 const maxLvValues = this.getMaxLvValues();
                 const maxResult = ColorCalculator.calculateMaxLuminance(this.state.colorPoints, maxLvValues);
                 this.updateMode4Results(maxResult);
-                Logger.info(`模式4计算完成: 最大光通量=${maxResult.maxLuminance.toFixed(1)}`, 'Calculator');
+                Logger.info(`模式4计算完成: 最大光通量=${this.formatValue(maxResult.maxLuminance)}`, 'Calculator');
             }
         } catch (error) {
             Logger.error(`计算失败: ${error.message}`, 'Calculator');
@@ -635,21 +641,21 @@ const ColorCalculatorApp = {
                         <div class="result-grid">
                             <div class="result-item">
                                 <span>红色所需光通量:</span>
-                                <span>${required.red.toFixed(1)}lm</span>
+                                <span>${this.formatValue(required.red)}lm</span>
                             </div>
                             <div class="result-item">
                                 <span>绿色所需光通量:</span>
-                                <span>${required.green.toFixed(1)}lm</span>
+                                <span>${this.formatValue(required.green)}lm</span>
                             </div>
                             <div class="result-item">
                                 <span>蓝色所需光通量:</span>
-                                <span>${required.blue.toFixed(1)}lm</span>
+                                <span>${this.formatValue(required.blue)}lm</span>
                             </div>
                         </div>
                     </div>
                 `;
                 
-                Logger.info(`目标色${index + 1}计算完成: R=${required.red.toFixed(1)}, G=${required.green.toFixed(1)}, B=${required.blue.toFixed(1)}`, 'Mode3Calculator');
+                Logger.info(`目标色${index + 1}计算完成: R=${this.formatValue(required.red)}, G=${this.formatValue(required.green)}, B=${this.formatValue(required.blue)}`, 'Mode3Calculator');
             } catch (error) {
                 hasError = true;
                 html += `
@@ -673,29 +679,29 @@ const ColorCalculatorApp = {
     updateMode3Results(results) {
         // 这个方法保留用于兼容性，新的多目标色计算使用calculateMode3MultiTargets
         if (this.elements.results.requiredRed) {
-            this.elements.results.requiredRed.textContent = results.red.toFixed(1);
+            this.elements.results.requiredRed.textContent = this.formatValue(results.red);
         }
         if (this.elements.results.requiredGreen) {
-            this.elements.results.requiredGreen.textContent = results.green.toFixed(1);
+            this.elements.results.requiredGreen.textContent = this.formatValue(results.green);
         }
         if (this.elements.results.requiredBlue) {
-            this.elements.results.requiredBlue.textContent = results.blue.toFixed(1);
+            this.elements.results.requiredBlue.textContent = this.formatValue(results.blue);
         }
     },
     
     // 更新模式4结果显示（计算最大光通量）
     updateMode4Results(results) {
         if (this.elements.results.maxLv) {
-            this.elements.results.maxLv.textContent = results.maxLuminance.toFixed(1);
+            this.elements.results.maxLv.textContent = this.formatValue(results.maxLuminance);
         }
         if (this.elements.results.redUsed) {
-            this.elements.results.redUsed.textContent = results.ratio.red.toFixed(1);
+            this.elements.results.redUsed.textContent = this.formatValue(results.ratio.red);
         }
         if (this.elements.results.greenUsed) {
-            this.elements.results.greenUsed.textContent = results.ratio.green.toFixed(1);
+            this.elements.results.greenUsed.textContent = this.formatValue(results.ratio.green);
         }
         if (this.elements.results.blueUsed) {
-            this.elements.results.blueUsed.textContent = results.ratio.blue.toFixed(1);
+            this.elements.results.blueUsed.textContent = this.formatValue(results.ratio.blue);
         }
     },
     
@@ -708,18 +714,18 @@ const ColorCalculatorApp = {
             const inputs = this.elements.inputs[color];
             
             if (point && inputs) {
-                if (inputs.x) inputs.x.value = point.x.toFixed(4);
-                if (inputs.y) inputs.y.value = point.y.toFixed(4);
-                if (inputs.lv) inputs.lv.value = point.lv.toFixed(1);
+                if (inputs.x) inputs.x.value = this.formatValue(point.x, 'coordinate');
+                if (inputs.y) inputs.y.value = this.formatValue(point.y, 'coordinate');
+                if (inputs.lv) inputs.lv.value = this.formatValue(point.lv);
             }
         });
         
         // 更新模式1的混合结果显示
         if (this.state.activeMode === 'mode1') {
             const mix = this.state.colorPoints.mix;
-            if (this.elements.results.mixX) this.elements.results.mixX.textContent = mix.x.toFixed(4);
-            if (this.elements.results.mixY) this.elements.results.mixY.textContent = mix.y.toFixed(4);
-            if (this.elements.results.mixLv) this.elements.results.mixLv.textContent = mix.lv.toFixed(1);
+            if (this.elements.results.mixX) this.elements.results.mixX.textContent = this.formatValue(mix.x, 'coordinate');
+            if (this.elements.results.mixY) this.elements.results.mixY.textContent = this.formatValue(mix.y, 'coordinate');
+            if (this.elements.results.mixLv) this.elements.results.mixLv.textContent = this.formatValue(mix.lv);
         }
     },
     
@@ -841,10 +847,10 @@ const ColorCalculatorApp = {
             
             // 更新输入框显示
             if (this.elements.inputs.target.x) {
-                this.elements.inputs.target.x.value = color.x.toFixed(4);
+                this.elements.inputs.target.x.value = this.formatValue(color.x, 'coordinate');
             }
             if (this.elements.inputs.target.y) {
-                this.elements.inputs.target.y.value = color.y.toFixed(4);
+                this.elements.inputs.target.y.value = this.formatValue(color.y, 'coordinate');
             }
             
             // Excel目标色选择器更新已移到模式3中处理
@@ -886,7 +892,7 @@ const ColorCalculatorApp = {
             const result = ColorCalculator.calculateMaxLuminance(this.state.colorPoints, maxLvValues);
             
             if (result.maxLuminance > 0) {
-                this.elements.inputs.maxLvHint.textContent = `最大可达: ${result.maxLuminance.toFixed(1)} lm`;
+                this.elements.inputs.maxLvHint.textContent = `最大可达: ${this.formatValue(result.maxLuminance)} lm`;
                 this.elements.inputs.maxLvHint.style.color = '#28a745';
             } else {
                 this.elements.inputs.maxLvHint.textContent = '目标色不在RGB三角形内';
@@ -932,8 +938,8 @@ const ColorCalculatorApp = {
             <span>总计: ${stats.total} 个颜色</span>
             <span>可见: ${stats.visible} 个</span>
             <span>高亮: ${stats.highlighted} 个</span>
-            <span>X范围: ${stats.xRange.min.toFixed(4)} - ${stats.xRange.max.toFixed(4)}</span>
-            <span>Y范围: ${stats.yRange.min.toFixed(4)} - ${stats.yRange.max.toFixed(4)}</span>
+            <span>X范围: ${this.formatValue(stats.xRange.min, 'coordinate')} - ${this.formatValue(stats.xRange.max, 'coordinate')}</span>
+            <span>Y范围: ${this.formatValue(stats.yRange.min, 'coordinate')} - ${this.formatValue(stats.yRange.max, 'coordinate')}</span>
         `;
     },
     
@@ -991,7 +997,7 @@ const ColorCalculatorApp = {
         luminanceBins.forEach(bin => {
             const option = document.createElement('option');
             option.value = bin.id;
-            option.textContent = `${bin.id} (${bin.min.toFixed(1)}-${bin.max.toFixed(1)} lm)`;
+            option.textContent = `${bin.id} (${this.formatValue(bin.min)}-${this.formatValue(bin.max)} lm)`;
             option.title = bin.description || '';
             elements.ledLuminanceBin.appendChild(option);
         });
@@ -1077,9 +1083,9 @@ const ColorCalculatorApp = {
             
             if (params) {
                 // 更新坐标和亮度输入框
-                if (elements.x) elements.x.value = params.x.toFixed(4);
-                if (elements.y) elements.y.value = params.y.toFixed(4);
-                if (elements.lv) elements.lv.value = params.lv.toFixed(1);
+                if (elements.x) elements.x.value = this.formatValue(params.x, 'coordinate');
+                if (elements.y) elements.y.value = this.formatValue(params.y, 'coordinate');
+                if (elements.lv) elements.lv.value = this.formatValue(params.lv);
                 
                 // 更新状态
                 this.state.colorPoints[color] = {
@@ -1111,12 +1117,12 @@ const ColorCalculatorApp = {
         const wavelengthInfo = LEDBinManager.getWavelengthBin(color, params.colorBin);
         const luminanceBin = LEDBinManager.getLuminanceBins(color).find(b => b.id === params.luminanceBin);
         
-        let infoText = `中心坐标: (${params.x.toFixed(4)}, ${params.y.toFixed(4)})`;
+        let infoText = `中心坐标: (${this.formatValue(params.x, 'coordinate')}, ${this.formatValue(params.y, 'coordinate')})`;
         if (wavelengthInfo) {
             infoText += ` | 波长: ${wavelengthInfo.min}-${wavelengthInfo.max}nm`;
         }
         if (luminanceBin) {
-            infoText += ` | 光通量: ${params.lv.toFixed(1)}lm`;
+            infoText += ` | 光通量: ${this.formatValue(params.lv)}lm`;
         }
         
         const infoElement = elements.ledInfo.querySelector('.led-wavelength-info');
@@ -1157,7 +1163,7 @@ const ColorCalculatorApp = {
         
         const target = {
             id: `manual_${Date.now()}`,
-            name: `手动输入 (${x.toFixed(4)}, ${y.toFixed(4)})`,
+            name: `手动输入 (${this.formatValue(x, 'coordinate')}, ${this.formatValue(y, 'coordinate')})`,
             x: x,
             y: y,
             lv: lv,
@@ -1244,8 +1250,8 @@ const ColorCalculatorApp = {
                 <div class="target-item" data-target-id="${target.id}">
                     <div class="target-info">
                         <strong>${target.name}</strong><br>
-                        <small>坐标: (${target.x.toFixed(4)}, ${target.y.toFixed(4)})</small><br>
-                        <small>目标光通量: ${target.lv.toFixed(1)}lm (最大可达: ${maxLv.toFixed(1)}lm)</small>
+                        <small>坐标: (${this.formatValue(target.x, 'coordinate')}, ${this.formatValue(target.y, 'coordinate')})</small><br>
+                        <small>目标光通量: ${this.formatValue(target.lv)}lm (最大可达: ${this.formatValue(maxLv)}lm)</small>
                     </div>
                     <button class="remove-target-btn" onclick="ColorCalculatorApp.removeTarget('${target.id}')">
                         ❌
@@ -1276,7 +1282,7 @@ const ColorCalculatorApp = {
             
             if (!isNaN(x) && !isNaN(y)) {
                 const maxLv = this.calculateMaxLuminanceForTarget(x, y);
-                mode3Elements.manualMaxHint.textContent = `最大可达: ${maxLv.toFixed(1)}lm`;
+                mode3Elements.manualMaxHint.textContent = `最大可达: ${this.formatValue(maxLv)}lm`;
             }
         }
         
@@ -1287,7 +1293,7 @@ const ColorCalculatorApp = {
                 const color = ExcelLoader.getColorById(selectedId);
                 if (color) {
                     const maxLv = this.calculateMaxLuminanceForTarget(color.x, color.y);
-                    mode3Elements.excelMaxHint.textContent = `最大可达: ${maxLv.toFixed(1)}lm`;
+                    mode3Elements.excelMaxHint.textContent = `最大可达: ${this.formatValue(maxLv)}lm`;
                 }
             }
         }

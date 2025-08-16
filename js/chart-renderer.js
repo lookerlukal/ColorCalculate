@@ -609,7 +609,7 @@ const ChartRenderer = {
             // 绘制坐标信息
             this.ctx.font = '10px Arial';
             this.ctx.fillText(
-                `(${colorData.x.toFixed(4)}, ${colorData.y.toFixed(4)})`, 
+                `(${PrecisionFormatter.formatValue(colorData.x, 'coordinate')}, ${PrecisionFormatter.formatValue(colorData.y, 'coordinate')})`, 
                 screenCoords.x, 
                 screenCoords.y + radius + 15
             );
@@ -666,8 +666,8 @@ const ChartRenderer = {
             title: colorData.name,
             lines: [
                 `ID: ${colorData.id}`,
-                `X: ${colorData.x.toFixed(4)}`,
-                `Y: ${colorData.y.toFixed(4)}`,
+                `X: ${PrecisionFormatter.formatValue(colorData.x, 'coordinate')}`,
+                `Y: ${PrecisionFormatter.formatValue(colorData.y, 'coordinate')}`,
                 '点击高亮显示'
             ]
         };

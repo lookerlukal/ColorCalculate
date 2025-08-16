@@ -78,8 +78,12 @@ const ColorCalculatorConfig = {
     // 数值精度设置
     precision: {
         coordinate: 4,    // 坐标精度（小数点后位数）
-        luminance: 1,     // 光通量精度
-        calculation: 6    // 计算精度
+        luminance: 4,     // 光通量精度（提高到4位小数）
+        calculation: 6,   // 计算精度
+        display: {        // 显示精度设置
+            coordinate: 4,
+            luminance: 4
+        }
     },
 
     // Excel导入相关配置
@@ -185,5 +189,14 @@ const ColorCalculatorConfig = {
     }
 };
 
+// 通用格式化工具函数
+const PrecisionFormatter = {
+    formatValue(value, type = 'luminance') {
+        const precision = ColorCalculatorConfig.precision.display[type];
+        return Number(value).toFixed(precision);
+    }
+};
+
 // 冻结配置对象，防止意外修改
 Object.freeze(ColorCalculatorConfig);
+Object.freeze(PrecisionFormatter);

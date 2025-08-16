@@ -117,7 +117,7 @@ const ColorCalculator = {
         // (x_r - x_t) * Lr + (x_g - x_t) * Lg = (x_t - x_b) * Lb
         // (y_r - y_t) * Lr + (y_g - y_t) * Lg = (y_t - y_b) * Lb
         
-        const samples = 2000; // 高精度采样
+        const samples = 5000; // 提高采样精度
         
         for (let i = 0; i <= samples; i++) {
             const lb = (i / samples) * maxLv.blue;
@@ -136,7 +136,7 @@ const ColorCalculator = {
             // 求解2x2线性方程组
             const det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
             
-            if (Math.abs(det) < 1e-10) {
+            if (Math.abs(det) < 1e-12) {
                 continue; // 矩阵奇异，跳过
             }
             
@@ -155,8 +155,8 @@ const ColorCalculator = {
                     const errorX = Math.abs(mixX - target.x);
                     const errorY = Math.abs(mixY - target.y);
                     
-                    // 使用更严格的容差
-                    if (errorX < 0.001 && errorY < 0.001) {
+                    // 使用更严格的容差，提高精度
+                    if (errorX < 0.0001 && errorY < 0.0001) {
                         if (totalLv > maxLuminance) {
                             maxLuminance = totalLv;
                             bestRatio = { red: lr, green: lg, blue: lb };
@@ -183,7 +183,7 @@ const ColorCalculator = {
                 
                 const det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
                 
-                if (Math.abs(det) < 1e-10) continue;
+                if (Math.abs(det) < 1e-12) continue;
                 
                 const lg = (b[0] * A[1][1] - b[1] * A[0][1]) / det;
                 const lb = (A[0][0] * b[1] - A[1][0] * b[0]) / det;
@@ -198,7 +198,7 @@ const ColorCalculator = {
                         const errorX = Math.abs(mixX - target.x);
                         const errorY = Math.abs(mixY - target.y);
                         
-                        if (errorX < 0.001 && errorY < 0.001) {
+                        if (errorX < 0.0001 && errorY < 0.0001) {
                             if (totalLv > maxLuminance) {
                                 maxLuminance = totalLv;
                                 bestRatio = { red: lr, green: lg, blue: lb };
@@ -238,7 +238,7 @@ const ColorCalculator = {
             [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
             
             // 检查奇异矩阵
-            if (Math.abs(augmented[i][i]) < 1e-10) {
+            if (Math.abs(augmented[i][i]) < 1e-12) {
                 return null; // 矩阵奇异，无解或无限解
             }
             

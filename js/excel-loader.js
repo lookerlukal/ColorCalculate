@@ -258,7 +258,7 @@ const ExcelLoader = {
         this.colorData.forEach(color => {
             const option = document.createElement('option');
             option.value = color.id;
-            option.textContent = `${color.name} (${color.x.toFixed(4)}, ${color.y.toFixed(4)})`;
+            option.textContent = `${color.name} (${PrecisionFormatter.formatValue(color.x, 'coordinate')}, ${PrecisionFormatter.formatValue(color.y, 'coordinate')})`;
             selector.appendChild(option);
         });
     }

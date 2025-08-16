@@ -302,10 +302,10 @@ const ColorTable = {
         row.innerHTML = `
             <td class="id-cell">${color.id}</td>
             <td class="name-cell">${color.name}</td>
-            <td class="coord-cell">${color.x.toFixed(4)}</td>
-            <td class="coord-cell">${color.y.toFixed(4)}</td>
+            <td class="coord-cell">${PrecisionFormatter.formatValue(color.x, 'coordinate')}</td>
+            <td class="coord-cell">${PrecisionFormatter.formatValue(color.y, 'coordinate')}</td>
             <td class="color-preview-cell">
-                <div class="color-swatch" style="background-color: ${colorPreview};" title="CIE坐标: (${color.x.toFixed(4)}, ${color.y.toFixed(4)})"></div>
+                <div class="color-swatch" style="background-color: ${colorPreview};" title="CIE坐标: (${PrecisionFormatter.formatValue(color.x, 'coordinate')}, ${PrecisionFormatter.formatValue(color.y, 'coordinate')})"></div>
             </td>
             <td class="action-cell">
                 <button class="action-btn visibility-btn ${color.visible ? 'visible' : 'hidden'}" 
