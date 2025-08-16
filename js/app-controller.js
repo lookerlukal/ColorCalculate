@@ -98,6 +98,10 @@ const ColorCalculatorApp = {
             lv: document.getElementById('target-lv')
         };
         
+        // Excel目标色选择器
+        this.elements.inputs.excelTargetSelector = document.getElementById('excel-target-selector');
+        this.elements.inputs.maxLvHint = document.getElementById('max-lv-hint');
+        
         // Excel导入相关元素（模式4）
         this.elements.inputs.excel = {
             fileInput: document.getElementById('excel-file-input'),
@@ -312,6 +316,19 @@ const ColorCalculatorApp = {
                 Logger.info('手动触发模式3计算', 'UI');
                 this.performCalculation();
                 this.updateDisplay();
+            });
+        }
+        
+        // Excel目标色选择器事件
+        if (this.elements.inputs.excelTargetSelector) {
+            this.elements.inputs.excelTargetSelector.addEventListener('change', (e) => {
+                const colorId = parseInt(e.target.value);
+                if (colorId) {
+                    const color = ExcelLoader.getColorById(colorId);
+                    if (color) {
+                        this.setTargetColorFromExcel(color);
+                    }
+                }
             });
         }
     },
@@ -554,15 +571,20 @@ const ColorCalculatorApp = {
                 this.state.colorPoints.mix = mixResult;
                 Logger.info(`模式1计算完成: 混合色(${mixResult.x.toFixed(4)}, ${mixResult.y.toFixed(4)}, ${mixResult.lv.toFixed(1)})`, 'Calculator');
             } else if (this.state.activeMode === 'mode2') {
-                const required = ColorCalculator.calculateRequiredLuminance(this.state.colorPoints);
-                this.updateMode2Results(required);
-                Logger.info(`模式2计算完成: R=${required.red.toFixed(1)}, G=${required.green.toFixed(1)}, B=${required.blue.toFixed(1)}`, 'Calculator');
+                // 模式2: 目标色导入 - 主要用于Excel数据导入和目标色设置，无需特殊计算
+                Logger.info('模式2: 目标色导入模式', 'Calculator');
             } else if (this.state.activeMode === 'mode3') {
-                // 获取界面上的最大光通量值
+                // 模式3: 计算光通量需求
+                const required = ColorCalculator.calculateRequiredLuminance(this.state.colorPoints);
+                this.updateMode3Results(required);
+                this.updateMaxLvHint(); // 更新最大光通量提示
+                Logger.info(`模式3计算完成: R=${required.red.toFixed(1)}, G=${required.green.toFixed(1)}, B=${required.blue.toFixed(1)}`, 'Calculator');
+            } else if (this.state.activeMode === 'mode4') {
+                // 模式4: 计算最大光通量
                 const maxLvValues = this.getMaxLvValues();
                 const maxResult = ColorCalculator.calculateMaxLuminance(this.state.colorPoints, maxLvValues);
-                this.updateMode3Results(maxResult);
-                Logger.info(`模式3计算完成: 最大光通量=${maxResult.maxLuminance.toFixed(1)}`, 'Calculator');
+                this.updateMode4Results(maxResult);
+                Logger.info(`模式4计算完成: 最大光通量=${maxResult.maxLuminance.toFixed(1)}`, 'Calculator');
             }
         } catch (error) {
             Logger.error(`计算失败: ${error.message}`, 'Calculator');
@@ -570,8 +592,8 @@ const ColorCalculatorApp = {
         }
     },
     
-    // 更新模式2结果显示
-    updateMode2Results(results) {
+    // 更新模式3结果显示（计算光通量需求）
+    updateMode3Results(results) {
         if (this.elements.results.requiredRed) {
             this.elements.results.requiredRed.textContent = results.red.toFixed(1);
         }
@@ -583,8 +605,8 @@ const ColorCalculatorApp = {
         }
     },
     
-    // 更新模式3结果显示
-    updateMode3Results(results) {
+    // 更新模式4结果显示（计算最大光通量）
+    updateMode4Results(results) {
         if (this.elements.results.maxLv) {
             this.elements.results.maxLv.textContent = results.maxLuminance.toFixed(1);
         }
@@ -692,6 +714,76 @@ const ColorCalculatorApp = {
             NotificationSystem.success(`成功加载 ${colorData.length} 个颜色数据`);
         } catch (error) {
             ErrorHandler.handle(error, 'Excel data loaded callback');
+        }
+    },
+    
+    // 从Excel数据设置目标色
+    setTargetColorFromExcel(color) {
+        try {
+            // 更新目标色坐标
+            this.state.colorPoints.target.x = color.x;
+            this.state.colorPoints.target.y = color.y;
+            
+            // 更新输入框显示
+            if (this.elements.inputs.target.x) {
+                this.elements.inputs.target.x.value = color.x.toFixed(4);
+            }
+            if (this.elements.inputs.target.y) {
+                this.elements.inputs.target.y.value = color.y.toFixed(4);
+            }
+            
+            // 更新Excel目标色选择器
+            if (this.elements.inputs.excelTargetSelector) {
+                this.elements.inputs.excelTargetSelector.value = color.id;
+            }
+            
+            // 更新最大光通量提示
+            this.updateMaxLvHint();
+            
+            // 重新计算和显示
+            this.performCalculation();
+            this.updateDisplay();
+            
+            Logger.info(`设置目标色: ${color.name} (${color.x}, ${color.y})`, 'ExcelTarget');
+        } catch (error) {
+            ErrorHandler.handle(error, 'setTargetColorFromExcel');
+        }
+    },
+    
+    // 更新最大光通量提示
+    updateMaxLvHint() {
+        if (!this.elements.inputs.maxLvHint) return;
+        
+        try {
+            // 使用当前的RGB基色坐标和目标色计算最大光通量
+            const maxLvValues = {
+                red: 100,   // 默认最大值，实际应从模式4获取
+                green: 100,
+                blue: 100
+            };
+            
+            // 如果模式4有设置，使用模式4的值
+            const redMaxInput = document.getElementById('red-max-lv');
+            const greenMaxInput = document.getElementById('green-max-lv');
+            const blueMaxInput = document.getElementById('blue-max-lv');
+            
+            if (redMaxInput && redMaxInput.value) maxLvValues.red = parseFloat(redMaxInput.value);
+            if (greenMaxInput && greenMaxInput.value) maxLvValues.green = parseFloat(greenMaxInput.value);
+            if (blueMaxInput && blueMaxInput.value) maxLvValues.blue = parseFloat(blueMaxInput.value);
+            
+            const result = ColorCalculator.calculateMaxLuminance(this.state.colorPoints, maxLvValues);
+            
+            if (result.maxLuminance > 0) {
+                this.elements.inputs.maxLvHint.textContent = `最大可达: ${result.maxLuminance.toFixed(1)} lm`;
+                this.elements.inputs.maxLvHint.style.color = '#28a745';
+            } else {
+                this.elements.inputs.maxLvHint.textContent = '目标色不在RGB三角形内';
+                this.elements.inputs.maxLvHint.style.color = '#dc3545';
+            }
+        } catch (error) {
+            this.elements.inputs.maxLvHint.textContent = '计算失败';
+            this.elements.inputs.maxLvHint.style.color = '#dc3545';
+            console.warn('最大光通量计算失败:', error);
         }
     },
     

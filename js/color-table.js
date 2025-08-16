@@ -134,8 +134,14 @@ const ColorTable = {
         if (e.target.classList.contains('visibility-btn')) {
             // 处理可见性切换
             this.toggleColorVisibility(colorId);
-        } else if (e.target.classList.contains('highlight-btn') || row.classList.contains('color-row')) {
+        } else if (e.target.classList.contains('highlight-btn')) {
             // 处理高亮切换
+            this.toggleColorHighlight(colorId);
+        } else if (e.target.classList.contains('target-btn')) {
+            // 处理设为目标色
+            this.setAsTargetColor(colorId);
+        } else if (row.classList.contains('color-row')) {
+            // 处理行点击高亮切换
             this.toggleColorHighlight(colorId);
         }
     },
@@ -156,6 +162,21 @@ const ColorTable = {
             const newHighlightState = !color.highlighted;
             ExcelLoader.setColorHighlight(colorId, newHighlightState);
             this.renderCurrentPage();
+        }
+    },
+    
+    // 设为目标色
+    setAsTargetColor(colorId) {
+        const color = ExcelLoader.getColorById(colorId);
+        if (!color) return;
+        
+        // 通过应用控制器设置目标色坐标
+        if (typeof ColorCalculatorApp !== 'undefined') {
+            ColorCalculatorApp.setTargetColorFromExcel(color);
+            NotificationSystem.success(`已将"${color.name}"设为目标色`);
+        } else {
+            console.error('ColorCalculatorApp不可用');
+            NotificationSystem.error('设置目标色失败');
         }
     },
     
@@ -272,6 +293,10 @@ const ColorTable = {
                 <button class="action-btn highlight-btn ${color.highlighted ? 'active' : ''}" 
                         title="${color.highlighted ? '取消高亮' : '高亮显示'}">
                     ${color.highlighted ? '⭐' : '☆'}
+                </button>
+                <button class="action-btn target-btn" 
+                        title="设为目标色">
+                    🎯
                 </button>
             </td>
         `;
