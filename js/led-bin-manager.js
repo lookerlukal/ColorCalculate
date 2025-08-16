@@ -399,29 +399,80 @@ const LEDBinManager = {
     
     // 计算三个BIN区域形成的最小色域三角形
     calculateMinimumTriangle(redBounds, greenBounds, blueBounds) {
-        // 为了得到最小色域，我们需要找到三个BIN区域中最接近中心的点
-        // 这样形成的三角形是最小的可实现色域
+        // 获取所有角点
+        const redCorners = redBounds.polygon;
+        const greenCorners = greenBounds.polygon;
+        const blueCorners = blueBounds.polygon;
         
-        // 使用每个BIN的中心点作为色域三角形的顶点
-        const redVertex = redBounds.center;
-        const greenVertex = greenBounds.center;
-        const blueVertex = blueBounds.center;
-        
-        if (!redVertex || !greenVertex || !blueVertex) {
+        if (!redCorners || !greenCorners || !blueCorners || 
+            redCorners.length === 0 || greenCorners.length === 0 || blueCorners.length === 0) {
             return null;
         }
+        
+        // 生成所有可能的三角形组合
+        const allTriangles = this.generateAllTriangleCombinations(redCorners, greenCorners, blueCorners);
+        
+        // 找到最保守的角点（最接近色域中心的点）作为最小色域的代表
+        const whitePoint = { x: 0.3333, y: 0.3333 }; // CIE 1931 白点
+        const redVertex = this.findClosestPoint(redCorners, whitePoint);
+        const greenVertex = this.findClosestPoint(greenCorners, whitePoint);
+        const blueVertex = this.findClosestPoint(blueCorners, whitePoint);
         
         return {
             red: redVertex,
             green: greenVertex,
             blue: blueVertex,
-            area: this.calculateTriangleArea(redVertex, greenVertex, blueVertex)
+            area: this.calculateTriangleArea(redVertex, greenVertex, blueVertex),
+            // 保存所有三角形组合用于精确的边界检测
+            allTriangles: allTriangles
         };
     },
     
     // 计算三角形面积
     calculateTriangleArea(p1, p2, p3) {
         return Math.abs((p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y)) / 2);
+    },
+    
+    // 生成所有可能的三角形组合 (R×G×B = 4×4×4 = 64个组合)
+    generateAllTriangleCombinations(redCorners, greenCorners, blueCorners) {
+        const triangles = [];
+        
+        for (let r of redCorners) {
+            for (let g of greenCorners) {
+                for (let b of blueCorners) {
+                    triangles.push({
+                        red: r,
+                        green: g,
+                        blue: b
+                    });
+                }
+            }
+        }
+        
+        return triangles;
+    },
+    
+    // 找到距离参考点最近的点
+    findClosestPoint(points, referencePoint) {
+        let closestPoint = points[0];
+        let minDistance = this.calculateDistance(points[0], referencePoint);
+        
+        for (let i = 1; i < points.length; i++) {
+            const distance = this.calculateDistance(points[i], referencePoint);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestPoint = points[i];
+            }
+        }
+        
+        return closestPoint;
+    },
+    
+    // 计算两点间的欧几里得距离
+    calculateDistance(point1, point2) {
+        const dx = point1.x - point2.x;
+        const dy = point1.y - point2.y;
+        return Math.sqrt(dx * dx + dy * dy);
     },
     
     // 检查点是否在LED BIN定义的最小色域内
@@ -431,14 +482,34 @@ const LEDBinManager = {
             return { inGamut: false, error: 'LED BIN选择不完整，无法确定色域范围' };
         }
         
-        // 使用点在三角形内的判断方法
-        const isInside = this.isPointInTriangle(point, gamut.red, gamut.green, gamut.blue);
-        
-        return {
-            inGamut: isInside,
-            gamut: gamut,
-            distance: isInside ? 0 : this.distanceToTriangle(point, gamut.red, gamut.green, gamut.blue)
-        };
+        // 方法：检查点是否在所有可能的三角形内（真正的交集）
+        // 只有在所有64个三角形内的点才被认为在最小色域内
+        if (gamut.allTriangles && gamut.allTriangles.length > 0) {
+            for (let triangle of gamut.allTriangles) {
+                if (!this.isPointInTriangle(point, triangle.red, triangle.green, triangle.blue)) {
+                    // 如果不在任何一个三角形内，则不在最小色域内
+                    return {
+                        inGamut: false,
+                        gamut: gamut,
+                        distance: this.distanceToTriangle(point, gamut.red, gamut.green, gamut.blue)
+                    };
+                }
+            }
+            // 在所有三角形内，属于最小色域
+            return {
+                inGamut: true,
+                gamut: gamut,
+                distance: 0
+            };
+        } else {
+            // 回退到原始方法（使用代表性三角形）
+            const isInside = this.isPointInTriangle(point, gamut.red, gamut.green, gamut.blue);
+            return {
+                inGamut: isInside,
+                gamut: gamut,
+                distance: isInside ? 0 : this.distanceToTriangle(point, gamut.red, gamut.green, gamut.blue)
+            };
+        }
     },
     
     // 判断点是否在三角形内 (使用重心坐标法)
@@ -497,6 +568,183 @@ const LEDBinManager = {
             const selection = this.getSelection(color);
             return selection.luminanceBin && selection.colorBin;
         });
+    },
+    
+    // 调试信息：获取当前最小色域的详细信息
+    getMinimumGamutDebugInfo() {
+        const gamut = this.getMinimumGamut();
+        if (!gamut) return null;
+        
+        const info = {
+            representativeTriangle: {
+                red: gamut.red,
+                green: gamut.green,
+                blue: gamut.blue,
+                area: gamut.area
+            },
+            totalTriangles: gamut.allTriangles ? gamut.allTriangles.length : 0,
+            binInfo: {}
+        };
+        
+        // 获取每个颜色的BIN信息
+        ['red', 'green', 'blue'].forEach(color => {
+            const selection = this.getSelection(color);
+            if (selection.colorBin) {
+                const coords = this.getColorBinCoordinates(color, selection.colorBin);
+                info.binInfo[color] = {
+                    binId: selection.colorBin,
+                    corners: coords,
+                    representative: gamut[color]
+                };
+            }
+        });
+        
+        return info;
+    },
+    
+    // 缓存精确交集多边形
+    _preciseBinGamutCache: null,
+    _preciseBinGamutCacheKey: null,
+    
+    // 计算64个三角形的精确交集多边形
+    calculatePreciseIntersectionPolygon() {
+        const gamut = this.getMinimumGamut();
+        if (!gamut || !gamut.allTriangles || gamut.allTriangles.length === 0) {
+            return null;
+        }
+        
+        // 生成缓存键
+        const cacheKey = this._generatePreciseCacheKey();
+        if (this._preciseBinGamutCache && this._preciseBinGamutCacheKey === cacheKey) {
+            return this._preciseBinGamutCache;
+        }
+        
+        console.log(`开始计算精确交集多边形，共${gamut.allTriangles.length}个三角形...`);
+        
+        try {
+            // 初始化交集为第一个三角形
+            let intersection = this._triangleToPolygon(gamut.allTriangles[0]);
+            
+            // 逐个与其他三角形求交集
+            for (let i = 1; i < gamut.allTriangles.length; i++) {
+                const triangle = this._triangleToPolygon(gamut.allTriangles[i]);
+                intersection = this._clipPolygon(intersection, triangle);
+                
+                // 如果交集为空，提前退出
+                if (!intersection || intersection.length === 0) {
+                    console.warn(`在第${i}个三角形处交集为空`);
+                    this._preciseBinGamutCache = null;
+                    this._preciseBinGamutCacheKey = cacheKey;
+                    return null;
+                }
+                
+                // 进度输出
+                if (i % 10 === 0) {
+                    console.log(`已处理 ${i}/${gamut.allTriangles.length} 个三角形`);
+                }
+            }
+            
+            console.log(`精确交集计算完成，结果多边形有${intersection.length}个顶点`);
+            
+            // 缓存结果
+            this._preciseBinGamutCache = intersection;
+            this._preciseBinGamutCacheKey = cacheKey;
+            
+            return intersection;
+        } catch (error) {
+            console.error('计算精确交集时出错:', error);
+            return null;
+        }
+    },
+    
+    // 生成精确计算的缓存键
+    _generatePreciseCacheKey() {
+        const selections = ['red', 'green', 'blue'].map(color => {
+            const sel = this.getSelection(color);
+            return `${color}:${sel.luminanceBin}-${sel.colorBin}`;
+        });
+        return selections.join('|');
+    },
+    
+    // 将三角形转换为多边形格式
+    _triangleToPolygon(triangle) {
+        return [
+            { x: triangle.red.x, y: triangle.red.y },
+            { x: triangle.green.x, y: triangle.green.y },
+            { x: triangle.blue.x, y: triangle.blue.y }
+        ];
+    },
+    
+    // Sutherland-Hodgman多边形裁剪算法
+    _clipPolygon(subjectPolygon, clipPolygon) {
+        if (!subjectPolygon || subjectPolygon.length === 0) return [];
+        
+        let outputList = [...subjectPolygon];
+        
+        // 对裁剪多边形的每条边进行裁剪
+        for (let i = 0; i < clipPolygon.length; i++) {
+            const edge1 = clipPolygon[i];
+            const edge2 = clipPolygon[(i + 1) % clipPolygon.length];
+            
+            const inputList = outputList;
+            outputList = [];
+            
+            if (inputList.length === 0) break;
+            
+            let s = inputList[inputList.length - 1];
+            
+            for (let j = 0; j < inputList.length; j++) {
+                const e = inputList[j];
+                
+                if (this._isInside(e, edge1, edge2)) {
+                    if (!this._isInside(s, edge1, edge2)) {
+                        const intersection = this._getIntersection(s, e, edge1, edge2);
+                        if (intersection) {
+                            outputList.push(intersection);
+                        }
+                    }
+                    outputList.push(e);
+                } else if (this._isInside(s, edge1, edge2)) {
+                    const intersection = this._getIntersection(s, e, edge1, edge2);
+                    if (intersection) {
+                        outputList.push(intersection);
+                    }
+                }
+                s = e;
+            }
+        }
+        
+        return outputList;
+    },
+    
+    // 判断点是否在边的内侧
+    _isInside(point, edgeStart, edgeEnd) {
+        return ((edgeEnd.x - edgeStart.x) * (point.y - edgeStart.y) - 
+                (edgeEnd.y - edgeStart.y) * (point.x - edgeStart.x)) >= 0;
+    },
+    
+    // 计算线段交点
+    _getIntersection(p1, p2, p3, p4) {
+        const x1 = p1.x, y1 = p1.y;
+        const x2 = p2.x, y2 = p2.y;
+        const x3 = p3.x, y3 = p3.y;
+        const x4 = p4.x, y4 = p4.y;
+        
+        const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+        if (Math.abs(denom) < 1e-10) return null;
+        
+        const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+        
+        return {
+            x: x1 + t * (x2 - x1),
+            y: y1 + t * (y2 - y1)
+        };
+    },
+    
+    // 清除精确交集缓存
+    clearPreciseGamutCache() {
+        this._preciseBinGamutCache = null;
+        this._preciseBinGamutCacheKey = null;
     },
     
     // 获取LED BIN模式的状态摘要

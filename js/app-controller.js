@@ -9,7 +9,8 @@ const ColorCalculatorApp = {
         sliderStepSize: 1.0,
         showSRGBGamut: true,
         showNTSCGamut: true,
-        showLEDBinGamut: false
+        showLEDBinGamut: false,
+        showPreciseGamut: false
     },
     
     // DOM 元素引用
@@ -50,6 +51,7 @@ const ColorCalculatorApp = {
         this.state.showSRGBGamut = ColorCalculatorConfig.ui.showSRGBGamut;
         this.state.showNTSCGamut = ColorCalculatorConfig.ui.showNTSCGamut;
         this.state.showLEDBinGamut = ColorCalculatorConfig.ui.showLEDBinGamut;
+        this.state.showPreciseGamut = false; // 默认不显示
         this.state.debugMode = false; // 调试模式，可通过控制台设置 ColorCalculatorApp.state.debugMode = true
     },
     
@@ -231,6 +233,26 @@ const ColorCalculatorApp = {
                 this.state.showLEDBinGamut = e.target.checked;
                 Logger.info(`LED BIN最小色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
                 this.updateDisplay();
+            });
+        }
+        
+        const preciseToggle = document.getElementById('show-precise-gamut');
+        if (preciseToggle) {
+            preciseToggle.addEventListener('change', (e) => {
+                this.state.showPreciseGamut = e.target.checked;
+                Logger.info(`精确交集色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+                
+                if (e.target.checked) {
+                    // 显示计算提示
+                    NotificationSystem.info('正在计算精确交集色域，请稍候...');
+                    
+                    // 异步执行计算以避免阻塞UI
+                    setTimeout(() => {
+                        this.updateDisplay();
+                    }, 100);
+                } else {
+                    this.updateDisplay();
+                }
             });
         }
         
@@ -890,7 +912,7 @@ const ColorCalculatorApp = {
     // 更新显示
     updateDisplay() {
         ChartRenderer.draw(this.state.colorPoints, this.state.activeMode, 
-            this.state.showSRGBGamut, this.state.showNTSCGamut, this.state.showLEDBinGamut);
+            this.state.showSRGBGamut, this.state.showNTSCGamut, this.state.showLEDBinGamut, this.state.showPreciseGamut);
         this.updateInputs();
         
         // 如果开启调试模式，绘制调试信息
@@ -1313,6 +1335,11 @@ const ColorCalculatorApp = {
                 
                 // 显示LED信息
                 this.showLEDInfo(color, params);
+                
+                // 清除精确交集缓存
+                if (typeof LEDBinManager !== 'undefined') {
+                    LEDBinManager.clearPreciseGamutCache();
+                }
                 
                 // 重新计算和显示
                 this.performCalculation();

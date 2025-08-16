@@ -16,11 +16,13 @@
       "Bash(git commit:*)",
       "Bash(git branch:*)",
       "mcp__ide__executeCode",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(start test-gamut-calculation.html)"
     ],
     "deny": [],
     "additionalDirectories": [
       "D:\\d D:\\softtest\\CURSE"
     ]
-  }
+  },
+  "outputStyle": "default"
 }

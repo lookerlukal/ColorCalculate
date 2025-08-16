@@ -60,7 +60,7 @@ const ChartRenderer = {
     },
     
     // 主绘制函数
-    draw(colorPoints, activeMode, showSRGBGamut, showNTSCGamut, showLEDBinGamut) {
+    draw(colorPoints, activeMode, showSRGBGamut, showNTSCGamut, showLEDBinGamut, showPreciseGamut) {
         const config = ColorCalculatorConfig.canvas;
         
         // 清空画布
@@ -78,7 +78,7 @@ const ChartRenderer = {
         }
         
         // 绘制色域边界
-        this.drawColorSpaceBoundaries(showSRGBGamut, showNTSCGamut, showLEDBinGamut);
+        this.drawColorSpaceBoundaries(showSRGBGamut, showNTSCGamut, showLEDBinGamut, showPreciseGamut);
         
         // 绘制LED BIN区域
         if (typeof LEDBinManager !== 'undefined' && ColorCalculatorConfig.ledBin.display.showBinAreas) {
@@ -226,7 +226,7 @@ const ChartRenderer = {
     },
     
     // 绘制色域边界
-    drawColorSpaceBoundaries(showSRGBGamut, showNTSCGamut, showLEDBinGamut) {
+    drawColorSpaceBoundaries(showSRGBGamut, showNTSCGamut, showLEDBinGamut, showPreciseGamut) {
         const colorSpaces = ColorCalculatorConfig.colorSpaces;
         
         // 绘制 sRGB 色域
@@ -242,6 +242,11 @@ const ChartRenderer = {
         // 绘制LED BIN最小色域
         if (showLEDBinGamut) {
             this.drawLEDBinMinimumGamut();
+        }
+        
+        // 绘制精确交集色域
+        if (showPreciseGamut) {
+            this.drawPreciseIntersectionGamut();
         }
     },
     
@@ -833,5 +838,67 @@ const ChartRenderer = {
         
         // 使用和sRGB相同的绘制方法，但采用不同的颜色和标签
         this.drawTriangle(gamutColorSpace, '#FF6600', 'LED BIN');
+    },
+    
+    // 绘制精确交集色域
+    drawPreciseIntersectionGamut() {
+        if (typeof LEDBinManager === 'undefined') return;
+        
+        try {
+            // 计算精确交集多边形
+            const precisePolygon = LEDBinManager.calculatePreciseIntersectionPolygon();
+            if (!precisePolygon || precisePolygon.length < 3) {
+                console.warn('精确交集多边形计算失败或结果无效');
+                return;
+            }
+            
+            this.drawPolygon(precisePolygon, '#9900CC', '精确交集');
+        } catch (error) {
+            console.error('绘制精确交集色域时出错:', error);
+        }
+    },
+    
+    // 绘制多边形
+    drawPolygon(polygon, color, label) {
+        if (!polygon || polygon.length < 3) return;
+        
+        const config = ColorCalculatorConfig.canvas;
+        
+        // 转换为屏幕坐标
+        const screenPoints = polygon.map(point => 
+            this.cieToScreenCoordinates(point.x, point.y, config.width, config.height)
+        );
+        
+        // 绘制多边形
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([]); // 实线
+        
+        // 移动到第一个点
+        this.ctx.moveTo(screenPoints[0].x, screenPoints[0].y);
+        
+        // 连接所有点
+        for (let i = 1; i < screenPoints.length; i++) {
+            this.ctx.lineTo(screenPoints[i].x, screenPoints[i].y);
+        }
+        
+        // 闭合路径
+        this.ctx.closePath();
+        this.ctx.stroke();
+        
+        // 可选：绘制标签
+        if (label && screenPoints.length > 0) {
+            // 计算多边形中心点用于放置标签
+            const centerX = screenPoints.reduce((sum, p) => sum + p.x, 0) / screenPoints.length;
+            const centerY = screenPoints.reduce((sum, p) => sum + p.y, 0) / screenPoints.length;
+            
+            this.ctx.save();
+            this.ctx.fillStyle = color;
+            this.ctx.font = '12px sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(label, centerX, centerY);
+            this.ctx.restore();
+        }
     }
 };
