@@ -1642,26 +1642,29 @@ const ColorCalculatorApp = {
         }
     },
     
-    // 监听LED BIN选择变化，更新色域按钮状态
+    // 监听LED BIN选择变化，更新色域按钮状态和图表显示
     onLEDBinSelectionUpdate() {
         const checkButton = document.getElementById('check-gamut-boundary');
         
-        if (!checkButton) return;
-        
-        const binStatus = LEDBinManager.getLEDBinStatus();
-        
-        if (binStatus.allEnabled && binStatus.gamut) {
-            // LED BIN模式完全启用，启用检测按钮
-            checkButton.disabled = false;
-        } else {
-            // LED BIN模式未完全启用，禁用检测按钮
-            checkButton.disabled = true;
+        if (checkButton) {
+            const binStatus = LEDBinManager.getLEDBinStatus();
             
-            // 清除表格中的色域检测结果
-            if (typeof ColorTable !== 'undefined') {
-                ColorTable.clearGamutCheckResults();
+            if (binStatus.allEnabled && binStatus.gamut) {
+                // LED BIN模式完全启用，启用检测按钮
+                checkButton.disabled = false;
+            } else {
+                // LED BIN模式未完全启用，禁用检测按钮
+                checkButton.disabled = true;
+                
+                // 清除表格中的色域检测结果
+                if (typeof ColorTable !== 'undefined') {
+                    ColorTable.clearGamutCheckResults();
+                }
             }
         }
+        
+        // 立即更新图表显示，刷新LED BIN最小色域
+        this.updateDisplay();
     }
 };
 

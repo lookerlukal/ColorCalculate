@@ -238,6 +238,9 @@ const ChartRenderer = {
         
         // 绘制 NTSC 色域
         this.drawTriangle(colorSpaces.ntsc, '#cc0066', 'NTSC');
+        
+        // 绘制LED BIN最小色域
+        this.drawLEDBinMinimumGamut();
     },
     
     drawTriangle(colorSpace, color, label) {
@@ -811,5 +814,24 @@ const ChartRenderer = {
         if (typeof ColorCalculatorApp !== 'undefined' && ColorCalculatorApp.updateDisplay) {
             ColorCalculatorApp.updateDisplay();
         }
+    },
+    
+    // 绘制LED BIN最小色域
+    drawLEDBinMinimumGamut() {
+        if (typeof LEDBinManager === 'undefined') return;
+        
+        // 获取LED BIN的最小色域
+        const minimumGamut = LEDBinManager.getMinimumGamut();
+        if (!minimumGamut) return;
+        
+        // 构造色域对象，与sRGB、NTSC格式保持一致
+        const gamutColorSpace = {
+            red: minimumGamut.red,
+            green: minimumGamut.green,
+            blue: minimumGamut.blue
+        };
+        
+        // 使用和sRGB相同的绘制方法，但采用不同的颜色和标签
+        this.drawTriangle(gamutColorSpace, '#FF6600', 'LED BIN');
     }
 };
