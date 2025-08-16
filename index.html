@@ -20,8 +20,20 @@
                 </div>
                 <div class="chart-controls">
                     <label class="checkbox-label">
-                        <input type="checkbox" id="show-gamut" checked>
-                        <span>显示色域边界 (sRGB/NTSC)</span>
+                        <input type="checkbox" id="show-srgb-gamut" checked>
+                        <span>sRGB色域</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-ntsc-gamut" checked>
+                        <span>NTSC色域</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-ledbin-gamut">
+                        <span>LED BIN最小色域</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-precise-gamut">
+                        <span>精确交集色域（计算密集）</span>
                     </label>
                 </div>
             </div>

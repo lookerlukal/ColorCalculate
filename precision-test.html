@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精确交集色域测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .result { padding: 10px; margin: 10px 0; }
+        .success { background-color: #d4edda; color: #155724; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; }
+        .debug-console { 
+            background-color: #f8f9fa; 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        .comparison-table th, .comparison-table td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: center; 
+        }
+        .comparison-table th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>精确交集色域测试页面</h1>
+    
+    <div class="test-section">
+        <h2>测试说明</h2>
+        <p>本页面用于测试64个三角形的精确交集计算功能</p>
+        <button onclick="runPrecisionTest()">运行精确性测试</button>
+        <button onclick="runPerformanceTest()">运行性能测试</button>
+        <button onclick="clearResults()">清除结果</button>
+    </div>
+    
+    <div id="test-results"></div>
+    <div id="debug-console" class="debug-console" style="display: none;"></div>
+    
+    <!-- 引入项目文件 -->
+    <script src="js/config.js"></script>
+    <script src="js/notification.js"></script>
+    <script src="js/led-bin-manager.js"></script>
+    
+    <script>
+        let debugMessages = [];
+        
+        // 拦截console.log用于调试显示
+        const originalConsoleLog = console.log;
+        const originalConsoleWarn = console.warn;
+        const originalConsoleError = console.error;
+        
+        console.log = function(...args) {
+            debugMessages.push('[LOG] ' + args.join(' '));
+            updateDebugConsole();
+            originalConsoleLog.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            debugMessages.push('[WARN] ' + args.join(' '));
+            updateDebugConsole();
+            originalConsoleWarn.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            debugMessages.push('[ERROR] ' + args.join(' '));
+            updateDebugConsole();
+            originalConsoleError.apply(console, args);
+        };
+        
+        function updateDebugConsole() {
+            const console = document.getElementById('debug-console');
+            console.style.display = 'block';
+            console.textContent = debugMessages.slice(-20).join('\\n'); // 只显示最后20条
+            console.scrollTop = console.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('debug-console').style.display = 'none';
+            debugMessages = [];
+        }
+        
+        function addResult(type, title, content) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = `<h3>${title}</h3><div>${content}</div>`;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function runPrecisionTest() {
+            clearResults();
+            addResult('info', '开始精确性测试', '正在初始化LED BIN管理器...');
+            
+            try {
+                // 初始化LED BIN管理器
+                LEDBinManager.init();
+                
+                // 设置测试用的LED选择
+                LEDBinManager.setSelection('red', '4V', 'JP');
+                LEDBinManager.setSelection('green', '8B', 'DJ');
+                LEDBinManager.setSelection('blue', '4T', 'AF');
+                
+                addResult('success', 'LED选择设置', '已设置测试用的LED BIN选择');
+                
+                // 测试1：基本功能验证
+                testBasicFunctionality();
+                
+                // 测试2：精确性验证
+                testPrecisionAccuracy();
+                
+                // 测试3：边界情况
+                testEdgeCases();
+                
+            } catch (error) {
+                addResult('error', '测试执行失败', error.message);
+            }
+        }
+        
+        function testBasicFunctionality() {
+            addResult('info', '基本功能测试', '正在计算精确交集...');
+            
+            const startTime = performance.now();
+            const precisePolygon = LEDBinManager.calculatePreciseIntersectionPolygon();
+            const endTime = performance.now();
+            
+            const calcTime = (endTime - startTime).toFixed(2);
+            
+            if (precisePolygon && precisePolygon.length > 0) {
+                let details = `
+                    <p><strong>计算成功！</strong></p>
+                    <ul>
+                        <li>计算耗时: ${calcTime} ms</li>
+                        <li>结果多边形顶点数: ${precisePolygon.length}</li>
+                        <li>多边形面积: ${calculatePolygonArea(precisePolygon).toFixed(8)}</li>
+                    </ul>
+                    <h4>多边形顶点坐标:</h4>
+                    <table class="comparison-table">
+                        <tr><th>序号</th><th>X坐标</th><th>Y坐标</th></tr>
+                `;
+                
+                precisePolygon.forEach((point, index) => {
+                    details += `<tr><td>${index + 1}</td><td>${point.x.toFixed(6)}</td><td>${point.y.toFixed(6)}</td></tr>`;
+                });
+                details += '</table>';
+                
+                addResult('success', '基本功能测试结果', details);
+            } else {
+                addResult('warning', '基本功能测试结果', `计算耗时 ${calcTime} ms，但结果为空或无效`);
+            }
+        }
+        
+        function testPrecisionAccuracy() {
+            addResult('info', '精确性验证', '比较代表性三角形与精确交集的差异...');
+            
+            const gamut = LEDBinManager.getMinimumGamut();
+            const precisePolygon = LEDBinManager.calculatePreciseIntersectionPolygon();
+            
+            if (!gamut || !precisePolygon) {
+                addResult('error', '精确性验证', '无法获取必要的数据');
+                return;
+            }
+            
+            // 计算代表性三角形的面积
+            const triangleArea = gamut.area;
+            const preciseArea = calculatePolygonArea(precisePolygon);
+            const areaRatio = (preciseArea / triangleArea * 100).toFixed(2);
+            
+            // 测试几个关键点
+            const testPoints = [
+                { x: 0.3333, y: 0.3333, name: '白点' },
+                { x: gamut.red.x, y: gamut.red.y, name: '红色代表点' },
+                { x: gamut.green.x, y: gamut.green.y, name: '绿色代表点' },
+                { x: gamut.blue.x, y: gamut.blue.y, name: '蓝色代表点' },
+                { 
+                    x: (gamut.red.x + gamut.green.x + gamut.blue.x) / 3,
+                    y: (gamut.red.y + gamut.green.y + gamut.blue.y) / 3,
+                    name: '三角形中心'
+                }
+            ];
+            
+            let details = `
+                <h4>面积比较:</h4>
+                <ul>
+                    <li>代表性三角形面积: ${triangleArea.toFixed(8)}</li>
+                    <li>精确交集面积: ${preciseArea.toFixed(8)}</li>
+                    <li>精确交集是代表性三角形的: ${areaRatio}%</li>
+                </ul>
+                <h4>关键点包含性测试:</h4>
+                <table class="comparison-table">
+                    <tr><th>测试点</th><th>坐标</th><th>在代表性三角形内</th><th>在精确交集内</th><th>一致性</th></tr>
+            `;
+            
+            testPoints.forEach(point => {
+                const inTriangle = isPointInTriangle(point, gamut.red, gamut.green, gamut.blue);
+                const inPolygon = isPointInPolygon(point, precisePolygon);
+                const consistent = inTriangle === inPolygon;
+                
+                details += `<tr>
+                    <td>${point.name}</td>
+                    <td>(${point.x.toFixed(4)}, ${point.y.toFixed(4)})</td>
+                    <td>${inTriangle ? '是' : '否'}</td>
+                    <td>${inPolygon ? '是' : '否'}</td>
+                    <td style="color: ${consistent ? 'green' : 'red'}">${consistent ? '一致' : '不一致'}</td>
+                </tr>`;
+            });
+            details += '</table>';
+            
+            addResult('info', '精确性验证结果', details);
+        }
+        
+        function testEdgeCases() {
+            addResult('info', '边界情况测试', '测试各种边界情况...');
+            
+            let results = [];
+            
+            // 测试1：缓存功能
+            const start1 = performance.now();
+            LEDBinManager.calculatePreciseIntersectionPolygon();
+            const time1 = performance.now() - start1;
+            
+            const start2 = performance.now();
+            LEDBinManager.calculatePreciseIntersectionPolygon(); // 第二次调用应该使用缓存
+            const time2 = performance.now() - start2;
+            
+            results.push(`缓存测试: 首次计算 ${time1.toFixed(2)}ms, 缓存调用 ${time2.toFixed(2)}ms`);
+            
+            // 测试2：清除缓存
+            LEDBinManager.clearPreciseGamutCache();
+            const start3 = performance.now();
+            LEDBinManager.calculatePreciseIntersectionPolygon();
+            const time3 = performance.now() - start3;
+            
+            results.push(`缓存清除测试: 清除后重新计算 ${time3.toFixed(2)}ms`);
+            
+            // 测试3：不同LED选择
+            const originalPolygon = LEDBinManager.calculatePreciseIntersectionPolygon();
+            
+            LEDBinManager.setSelection('red', '3V', 'MT'); // 改变红色选择
+            const newPolygon = LEDBinManager.calculatePreciseIntersectionPolygon();
+            
+            const vertexCountChanged = originalPolygon.length !== newPolygon.length;
+            results.push(`不同LED选择测试: 顶点数量${vertexCountChanged ? '有变化' : '无变化'} (${originalPolygon.length} -> ${newPolygon.length})`);
+            
+            // 恢复原始设置
+            LEDBinManager.setSelection('red', '4V', 'JP');
+            
+            const details = '<ul><li>' + results.join('</li><li>') + '</li></ul>';
+            addResult('success', '边界情况测试结果', details);
+        }
+        
+        function runPerformanceTest() {
+            clearResults();
+            addResult('info', '性能测试', '正在进行性能基准测试...');
+            
+            try {
+                LEDBinManager.init();
+                LEDBinManager.setSelection('red', '4V', 'JP');
+                LEDBinManager.setSelection('green', '8B', 'DJ');
+                LEDBinManager.setSelection('blue', '4T', 'AF');
+                
+                const iterations = 5;
+                const times = [];
+                
+                for (let i = 0; i < iterations; i++) {
+                    LEDBinManager.clearPreciseGamutCache(); // 确保每次都重新计算
+                    
+                    const start = performance.now();
+                    const result = LEDBinManager.calculatePreciseIntersectionPolygon();
+                    const end = performance.now();
+                    
+                    times.push(end - start);
+                    addResult('info', `性能测试 - 第${i + 1}次`, `计算耗时: ${(end - start).toFixed(2)} ms, 结果顶点数: ${result ? result.length : 0}`);
+                }
+                
+                const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+                const minTime = Math.min(...times);
+                const maxTime = Math.max(...times);
+                
+                const summary = `
+                    <h4>性能统计 (${iterations}次测试):</h4>
+                    <ul>
+                        <li>平均耗时: ${avgTime.toFixed(2)} ms</li>
+                        <li>最短耗时: ${minTime.toFixed(2)} ms</li>
+                        <li>最长耗时: ${maxTime.toFixed(2)} ms</li>
+                        <li>性能评估: ${avgTime < 100 ? '优秀' : avgTime < 500 ? '良好' : avgTime < 1000 ? '一般' : '需要优化'}</li>
+                    </ul>
+                `;
+                
+                addResult('success', '性能测试总结', summary);
+                
+            } catch (error) {
+                addResult('error', '性能测试失败', error.message);
+            }
+        }
+        
+        // 辅助函数：计算多边形面积
+        function calculatePolygonArea(polygon) {
+            if (!polygon || polygon.length < 3) return 0;
+            
+            let area = 0;
+            for (let i = 0; i < polygon.length; i++) {
+                const j = (i + 1) % polygon.length;
+                area += polygon[i].x * polygon[j].y;
+                area -= polygon[j].x * polygon[i].y;
+            }
+            return Math.abs(area) / 2;
+        }
+        
+        // 辅助函数：点在三角形内判断
+        function isPointInTriangle(point, v1, v2, v3) {
+            const denom = (v2.y - v3.y) * (v1.x - v3.x) + (v3.x - v2.x) * (v1.y - v3.y);
+            
+            if (Math.abs(denom) < 1e-12) {
+                return false;
+            }
+            
+            const a = ((v2.y - v3.y) * (point.x - v3.x) + (v3.x - v2.x) * (point.y - v3.y)) / denom;
+            const b = ((v3.y - v1.y) * (point.x - v3.x) + (v1.x - v3.x) * (point.y - v3.y)) / denom;
+            const c = 1 - a - b;
+            
+            return a >= 0 && b >= 0 && c >= 0;
+        }
+        
+        // 辅助函数：点在多边形内判断（射线法）
+        function isPointInPolygon(point, polygon) {
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].x, yi = polygon[i].y;
+                const xj = polygon[j].x, yj = polygon[j].y;
+                
+                if (((yi > point.y) !== (yj > point.y)) && 
+                    (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+        
+        // 页面加载完成后显示说明
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('info', '测试说明', `
+                <p>本页面提供以下测试功能：</p>
+                <ul>
+                    <li><strong>精确性测试：</strong>验证64个三角形交集算法的正确性</li>
+                    <li><strong>性能测试：</strong>测量计算耗时和性能表现</li>
+                    <li><strong>边界情况：</strong>测试缓存、不同选择等特殊情况</li>
+                </ul>
+                <p>所有计算过程和结果都会在下方显示。</p>
+            `);
+        });
+    </script>
+</body>
+</html>

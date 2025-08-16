@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色域可视化一致性验证</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .result { padding: 10px; margin: 10px 0; }
+        .success { background-color: #d4edda; color: #155724; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; }
+        .canvas-container { text-align: center; margin: 20px 0; }
+        canvas { border: 1px solid #ccc; }
+        .coordinates { font-family: monospace; background-color: #f8f9fa; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>LED BIN最小色域可视化一致性验证</h1>
+    
+    <div class="test-section">
+        <h2>测试说明</h2>
+        <p>验证图表中绘制的橙色虚线三角形与改进后的算法计算结果是否一致</p>
+        <button onclick="runVisualizationTest()">运行验证</button>
+        <button onclick="clearResults()">清除结果</button>
+    </div>
+    
+    <div id="test-results"></div>
+    
+    <div class="canvas-container">
+        <h3>简化CIE图示意</h3>
+        <canvas id="demo-canvas" width="400" height="400"></canvas>
+        <p>橙色虚线：当前绘制的LED BIN最小色域</p>
+    </div>
+    
+    <!-- 引入项目文件 -->
+    <script src="js/config.js"></script>
+    <script src="js/notification.js"></script>
+    <script src="js/led-bin-manager.js"></script>
+    
+    <script>
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+        }
+        
+        function addResult(type, title, content) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = `<h3>${title}</h3><div>${content}</div>`;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function runVisualizationTest() {
+            clearResults();
+            
+            try {
+                // 初始化并设置LED选择
+                LEDBinManager.init();
+                LEDBinManager.setSelection('red', '4V', 'JP');
+                LEDBinManager.setSelection('green', '8B', 'DJ');
+                LEDBinManager.setSelection('blue', '4T', 'AF');
+                
+                // 获取最小色域数据
+                const gamut = LEDBinManager.getMinimumGamut();
+                const debugInfo = LEDBinManager.getMinimumGamutDebugInfo();
+                
+                if (!gamut) {
+                    addResult('warning', '数据验证', '无法获取LED BIN最小色域数据');
+                    return;
+                }
+                
+                // 验证1：绘制的三角形顶点
+                testDisplayedTriangle(gamut, debugInfo);
+                
+                // 验证2：边界检测一致性
+                testBoundaryConsistency(gamut);
+                
+                // 验证3：可视化绘制
+                drawDemoVisualization(gamut, debugInfo);
+                
+                addResult('success', '验证完成', '所有测试已完成，请查看下方结果');
+                
+            } catch (error) {
+                addResult('error', '测试失败', error.message);
+            }
+        }
+        
+        function testDisplayedTriangle(gamut, debugInfo) {
+            let details = `
+                <div class="coordinates">
+                    <h4>当前绘制的三角形顶点（橙色虚线）：</h4>
+                    <p><strong>红色顶点：</strong> (${gamut.red.x.toFixed(4)}, ${gamut.red.y.toFixed(4)})</p>
+                    <p><strong>绿色顶点：</strong> (${gamut.green.x.toFixed(4)}, ${gamut.green.y.toFixed(4)})</p>
+                    <p><strong>蓝色顶点：</strong> (${gamut.blue.x.toFixed(4)}, ${gamut.blue.y.toFixed(4)})</p>
+                    <p><strong>三角形面积：</strong> ${gamut.area.toFixed(6)}</p>
+                </div>
+                <h4>角点选择策略验证：</h4>
+                <ul>
+            `;
+            
+            // 验证每个颜色是否选择了最保守的角点
+            ['red', 'green', 'blue'].forEach(color => {
+                const binInfo = debugInfo.binInfo[color];
+                if (binInfo) {
+                    const whitePoint = { x: 0.3333, y: 0.3333 };
+                    let minDistance = Infinity;
+                    let closestCorner = null;
+                    
+                    binInfo.corners.forEach(corner => {
+                        const distance = Math.sqrt(
+                            Math.pow(corner.x - whitePoint.x, 2) + 
+                            Math.pow(corner.y - whitePoint.y, 2)
+                        );
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestCorner = corner;
+                        }
+                    });
+                    
+                    const isCorrect = Math.abs(closestCorner.x - binInfo.representative.x) < 0.0001 &&
+                                     Math.abs(closestCorner.y - binInfo.representative.y) < 0.0001;
+                    
+                    details += `<li>${color}: ${isCorrect ? '✓' : '✗'} ${isCorrect ? '选择正确' : '选择有误'} 
+                               (距离白点: ${minDistance.toFixed(4)})</li>`;
+                }
+            });
+            
+            details += '</ul>';
+            addResult('info', '绘制三角形验证', details);
+        }
+        
+        function testBoundaryConsistency(gamut) {
+            const testPoints = [
+                { x: 0.3333, y: 0.3333, name: '白点', expected: true },
+                { x: gamut.red.x, y: gamut.red.y, name: '红色顶点', expected: true },
+                { x: gamut.green.x, y: gamut.green.y, name: '绿色顶点', expected: true },
+                { x: gamut.blue.x, y: gamut.blue.y, name: '蓝色顶点', expected: true },
+                { x: 0.1, y: 0.1, name: '远离点', expected: false },
+                { x: 0.8, y: 0.8, name: '极端点', expected: false }
+            ];
+            
+            let details = '<table border="1"><tr><th>测试点</th><th>坐标</th><th>代表性三角形内</th><th>64个三角形交集内</th><th>一致性</th></tr>';
+            
+            testPoints.forEach(point => {
+                // 模拟代表性三角形检测
+                const inRepresentative = isPointInTriangle(point, gamut.red, gamut.green, gamut.blue);
+                
+                // 使用改进后的交集检测
+                const fullResult = LEDBinManager.isPointInMinimumGamut(point);
+                const inIntersection = fullResult.inGamut;
+                
+                const consistent = inRepresentative === inIntersection;
+                
+                details += `<tr>
+                    <td>${point.name}</td>
+                    <td>(${point.x.toFixed(3)}, ${point.y.toFixed(3)})</td>
+                    <td>${inRepresentative ? '是' : '否'}</td>
+                    <td>${inIntersection ? '是' : '否'}</td>
+                    <td style="color: ${consistent ? 'green' : 'red'}">${consistent ? '一致' : '不一致'}</td>
+                </tr>`;
+            });
+            details += '</table>';
+            
+            addResult('info', '边界检测一致性', details);
+        }
+        
+        function drawDemoVisualization(gamut, debugInfo) {
+            const canvas = document.getElementById('demo-canvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 清除画布
+            ctx.clearRect(0, 0, width, height);
+            
+            // 坐标转换函数
+            function toScreen(x, y) {
+                return {
+                    x: x * width * 0.8 + width * 0.1,
+                    y: height * 0.9 - y * height * 0.8
+                };
+            }
+            
+            // 绘制坐标轴
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(width * 0.1, height * 0.1);
+            ctx.lineTo(width * 0.1, height * 0.9);
+            ctx.lineTo(width * 0.9, height * 0.9);
+            ctx.stroke();
+            
+            // 绘制BIN区域（简化显示）
+            ['red', 'green', 'blue'].forEach((color, index) => {
+                const binInfo = debugInfo.binInfo[color];
+                if (binInfo && binInfo.corners) {
+                    const colors = ['#ffcccc', '#ccffcc', '#ccccff'];
+                    ctx.fillStyle = colors[index];
+                    ctx.beginPath();
+                    
+                    binInfo.corners.forEach((corner, i) => {
+                        const screen = toScreen(corner.x, corner.y);
+                        if (i === 0) ctx.moveTo(screen.x, screen.y);
+                        else ctx.lineTo(screen.x, screen.y);
+                    });
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // 标记代表性角点
+                    const repScreen = toScreen(binInfo.representative.x, binInfo.representative.y);
+                    ctx.fillStyle = ['#ff0000', '#00ff00', '#0000ff'][index];
+                    ctx.beginPath();
+                    ctx.arc(repScreen.x, repScreen.y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+            
+            // 绘制最小色域三角形（橙色虚线）
+            ctx.strokeStyle = '#FF6600';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            
+            const redScreen = toScreen(gamut.red.x, gamut.red.y);
+            const greenScreen = toScreen(gamut.green.x, gamut.green.y);
+            const blueScreen = toScreen(gamut.blue.x, gamut.blue.y);
+            
+            ctx.moveTo(redScreen.x, redScreen.y);
+            ctx.lineTo(greenScreen.x, greenScreen.y);
+            ctx.lineTo(blueScreen.x, blueScreen.y);
+            ctx.closePath();
+            ctx.stroke();
+            
+            // 添加标签
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.fillText('R', redScreen.x + 5, redScreen.y - 5);
+            ctx.fillText('G', greenScreen.x + 5, greenScreen.y - 5);
+            ctx.fillText('B', blueScreen.x + 5, blueScreen.y - 5);
+            
+            addResult('info', '可视化绘制', '已在下方画布中绘制LED BIN最小色域示意图');
+        }
+        
+        // 三角形包含检测（重心坐标法）
+        function isPointInTriangle(point, v1, v2, v3) {
+            const denom = (v2.y - v3.y) * (v1.x - v3.x) + (v3.x - v2.x) * (v1.y - v3.y);
+            
+            if (Math.abs(denom) < 1e-12) {
+                return false;
+            }
+            
+            const a = ((v2.y - v3.y) * (point.x - v3.x) + (v3.x - v2.x) * (point.y - v3.y)) / denom;
+            const b = ((v3.y - v1.y) * (point.x - v3.x) + (v1.x - v3.x) * (point.y - v3.y)) / denom;
+            const c = 1 - a - b;
+            
+            return a >= 0 && b >= 0 && c >= 0;
+        }
+        
+        // 页面加载完成后显示说明
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('info', '验证目标', `
+                <p>本页面验证以下内容：</p>
+                <ul>
+                    <li><strong>绘制一致性：</strong>图表中的橙色虚线是否使用了改进算法的结果</li>
+                    <li><strong>角点选择：</strong>绘制的三角形顶点是否为最保守的角点</li>
+                    <li><strong>边界检测：</strong>可视化边界与实际边界检测的一致性</li>
+                </ul>
+                <p>点击"运行验证"开始测试。</p>
+            `);
+        });
+    </script>
+</body>
+</html>

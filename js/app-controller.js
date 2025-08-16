@@ -7,7 +7,10 @@ const ColorCalculatorApp = {
         draggingPoint: null,
         draggingSlider: null,
         sliderStepSize: 1.0,
-        showGamutBoundaries: true
+        showSRGBGamut: true,
+        showNTSCGamut: true,
+        showLEDBinGamut: false,
+        showPreciseGamut: false
     },
     
     // DOM 元素引用
@@ -45,7 +48,10 @@ const ColorCalculatorApp = {
     initializeState() {
         this.state.colorPoints = { ...ColorCalculatorConfig.defaultColorPoints };
         this.state.sliderStepSize = ColorCalculatorConfig.slider.defaultStepSize;
-        this.state.showGamutBoundaries = ColorCalculatorConfig.ui.showGamutBoundaries;
+        this.state.showSRGBGamut = ColorCalculatorConfig.ui.showSRGBGamut;
+        this.state.showNTSCGamut = ColorCalculatorConfig.ui.showNTSCGamut;
+        this.state.showLEDBinGamut = ColorCalculatorConfig.ui.showLEDBinGamut;
+        this.state.showPreciseGamut = false; // 默认不显示
         this.state.debugMode = false; // 调试模式，可通过控制台设置 ColorCalculatorApp.state.debugMode = true
     },
     
@@ -203,12 +209,50 @@ const ColorCalculatorApp = {
         this.bindKeyboardEvents();
         
         // 色域显示开关
-        const gamutToggle = document.getElementById('show-gamut');
-        if (gamutToggle) {
-            gamutToggle.addEventListener('change', (e) => {
-                this.state.showGamutBoundaries = e.target.checked;
-                Logger.info(`色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+        const srgbToggle = document.getElementById('show-srgb-gamut');
+        if (srgbToggle) {
+            srgbToggle.addEventListener('change', (e) => {
+                this.state.showSRGBGamut = e.target.checked;
+                Logger.info(`sRGB色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
                 this.updateDisplay();
+            });
+        }
+        
+        const ntscToggle = document.getElementById('show-ntsc-gamut');
+        if (ntscToggle) {
+            ntscToggle.addEventListener('change', (e) => {
+                this.state.showNTSCGamut = e.target.checked;
+                Logger.info(`NTSC色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+                this.updateDisplay();
+            });
+        }
+        
+        const ledbinToggle = document.getElementById('show-ledbin-gamut');
+        if (ledbinToggle) {
+            ledbinToggle.addEventListener('change', (e) => {
+                this.state.showLEDBinGamut = e.target.checked;
+                Logger.info(`LED BIN最小色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+                this.updateDisplay();
+            });
+        }
+        
+        const preciseToggle = document.getElementById('show-precise-gamut');
+        if (preciseToggle) {
+            preciseToggle.addEventListener('change', (e) => {
+                this.state.showPreciseGamut = e.target.checked;
+                Logger.info(`精确交集色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+                
+                if (e.target.checked) {
+                    // 显示计算提示
+                    NotificationSystem.info('正在计算精确交集色域，请稍候...');
+                    
+                    // 异步执行计算以避免阻塞UI
+                    setTimeout(() => {
+                        this.updateDisplay();
+                    }, 100);
+                } else {
+                    this.updateDisplay();
+                }
             });
         }
         
@@ -513,9 +557,7 @@ const ColorCalculatorApp = {
         const tolerance = 15; // 点击容差
         
         const pointNames = ['red', 'green', 'blue'];
-        if (this.state.activeMode === 'mode2' || this.state.activeMode === 'mode3') {
-            pointNames.push('target');
-        } else if (this.state.activeMode === 'mode1') {
+        if (this.state.activeMode === 'mode1') {
             pointNames.push('mix');
         }
         
@@ -869,7 +911,8 @@ const ColorCalculatorApp = {
     
     // 更新显示
     updateDisplay() {
-        ChartRenderer.draw(this.state.colorPoints, this.state.activeMode, this.state.showGamutBoundaries);
+        ChartRenderer.draw(this.state.colorPoints, this.state.activeMode, 
+            this.state.showSRGBGamut, this.state.showNTSCGamut, this.state.showLEDBinGamut, this.state.showPreciseGamut);
         this.updateInputs();
         
         // 如果开启调试模式，绘制调试信息
@@ -976,18 +1019,6 @@ const ColorCalculatorApp = {
     // 从Excel数据设置目标色
     setTargetColorFromExcel(color) {
         try {
-            // 更新目标色坐标
-            this.state.colorPoints.target.x = color.x;
-            this.state.colorPoints.target.y = color.y;
-            
-            // 更新输入框显示
-            if (this.elements.inputs.target.x) {
-                this.elements.inputs.target.x.value = this.formatValue(color.x, 'coordinate');
-            }
-            if (this.elements.inputs.target.y) {
-                this.elements.inputs.target.y.value = this.formatValue(color.y, 'coordinate');
-            }
-            
             // Excel目标色选择器更新已移到模式3中处理
             
             // 更新最大光通量提示
@@ -1304,6 +1335,11 @@ const ColorCalculatorApp = {
                 
                 // 显示LED信息
                 this.showLEDInfo(color, params);
+                
+                // 清除精确交集缓存
+                if (typeof LEDBinManager !== 'undefined') {
+                    LEDBinManager.clearPreciseGamutCache();
+                }
                 
                 // 重新计算和显示
                 this.performCalculation();
@@ -1642,26 +1678,42 @@ const ColorCalculatorApp = {
         }
     },
     
-    // 监听LED BIN选择变化，更新色域按钮状态
+    // 监听LED BIN选择变化，更新色域按钮状态和图表显示
     onLEDBinSelectionUpdate() {
         const checkButton = document.getElementById('check-gamut-boundary');
+        const ledbinToggle = document.getElementById('show-ledbin-gamut');
         
-        if (!checkButton) return;
-        
-        const binStatus = LEDBinManager.getLEDBinStatus();
-        
-        if (binStatus.allEnabled && binStatus.gamut) {
-            // LED BIN模式完全启用，启用检测按钮
-            checkButton.disabled = false;
-        } else {
-            // LED BIN模式未完全启用，禁用检测按钮
-            checkButton.disabled = true;
+        if (checkButton) {
+            const binStatus = LEDBinManager.getLEDBinStatus();
             
-            // 清除表格中的色域检测结果
-            if (typeof ColorTable !== 'undefined') {
-                ColorTable.clearGamutCheckResults();
+            if (binStatus.allEnabled && binStatus.gamut) {
+                // LED BIN模式完全启用，启用检测按钮
+                checkButton.disabled = false;
+                
+                // 启用LED BIN色域显示选项
+                if (ledbinToggle) {
+                    ledbinToggle.disabled = false;
+                }
+            } else {
+                // LED BIN模式未完全启用，禁用检测按钮
+                checkButton.disabled = true;
+                
+                // 禁用并取消勾选LED BIN色域显示选项
+                if (ledbinToggle) {
+                    ledbinToggle.disabled = true;
+                    ledbinToggle.checked = false;
+                    this.state.showLEDBinGamut = false;
+                }
+                
+                // 清除表格中的色域检测结果
+                if (typeof ColorTable !== 'undefined') {
+                    ColorTable.clearGamutCheckResults();
+                }
             }
         }
+        
+        // 立即更新图表显示，刷新LED BIN最小色域
+        this.updateDisplay();
     }
 };
 
