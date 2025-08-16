@@ -165,18 +165,40 @@ const ColorTable = {
         }
     },
     
-    // 设为目标色
+    // 设为目标色（添加到模式3的多选列表）
     setAsTargetColor(colorId) {
         const color = ExcelLoader.getColorById(colorId);
         if (!color) return;
         
-        // 通过应用控制器设置目标色坐标
-        if (typeof ColorCalculatorApp !== 'undefined') {
-            ColorCalculatorApp.setTargetColorFromExcel(color);
-            NotificationSystem.success(`已将"${color.name}"设为目标色`);
+        // 检查是否已经添加过
+        if (typeof ColorCalculatorApp !== 'undefined' && ColorCalculatorApp.state.selectedTargets) {
+            const exists = ColorCalculatorApp.state.selectedTargets.some(target => 
+                target.type === 'excel' && target.originalId == colorId
+            );
+            
+            if (exists) {
+                NotificationSystem.warning(`"${color.name}"已在目标色列表中`);
+                return;
+            }
+            
+            // 添加到模式3的目标色列表
+            const target = {
+                id: `excel_${colorId}_${Date.now()}`,
+                name: color.name,
+                x: color.x,
+                y: color.y,
+                lv: 30, // 默认光通量
+                type: 'excel',
+                originalId: colorId
+            };
+            
+            ColorCalculatorApp.state.selectedTargets.push(target);
+            ColorCalculatorApp.updateTargetList();
+            
+            NotificationSystem.success(`已将"${color.name}"添加到目标色列表`);
         } else {
             console.error('ColorCalculatorApp不可用');
-            NotificationSystem.error('设置目标色失败');
+            NotificationSystem.error('添加目标色失败');
         }
     },
     

@@ -268,6 +268,136 @@ input[type="number"] {
     margin-top: 20px;
 }
 
+/* 模式3多选目标色样式 */
+.target-color-selection {
+    margin-bottom: 20px;
+}
+
+.manual-target-input,
+.excel-target-selection {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.manual-target-input h4,
+.excel-target-selection h4 {
+    margin-bottom: 10px;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.selected-targets {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.selected-targets h4 {
+    margin-bottom: 10px;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.target-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.target-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.target-info {
+    flex: 1;
+}
+
+.target-info strong {
+    color: #495057;
+    font-size: 14px;
+}
+
+.target-info small {
+    color: #6c757d;
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.remove-target-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    margin-left: 10px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.remove-target-btn:hover {
+    background-color: #e9ecef;
+}
+
+.empty-hint {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    margin: 10px 0;
+}
+
+/* 模式3计算结果样式 */
+.target-result {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #fff;
+}
+
+.target-result h4 {
+    margin-bottom: 10px;
+    color: #495057;
+    font-size: 16px;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 5px;
+}
+
+.target-result.error {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+.error-message {
+    color: #721c24;
+    font-size: 14px;
+    margin: 5px 0;
+}
+
+.result-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.result-grid .result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+}
+
 /* 媒体查询 */
 @media (max-width: 768px) {
     .main-content {
@@ -277,9 +407,16 @@ input[type="number"] {
     .color-inputs {
         flex-direction: column;
     }
-
-    .preset-controls {
+    
+    .target-item {
         flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .remove-target-btn {
+        align-self: flex-end;
+        margin-left: 0;
+        margin-top: 8px;
     }
 }
 

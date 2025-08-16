@@ -105,7 +105,7 @@ const ColorCalculatorConfig = {
     
     // 颜色表格配置
     colorTable: {
-        pageSize: 20,           // 每页显示的行数
+        pageSize: 60,           // 每页显示的行数
         maxPageSize: 100,       // 最大页面大小
         searchDebounceTime: 300, // 搜索防抖时间（毫秒）
         colorPreviewSize: 16,   // 颜色预览方块大小

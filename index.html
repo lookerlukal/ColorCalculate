@@ -31,7 +31,6 @@
                     <button id="tab1" class="tab-btn active">模式1: 计算混合结果</button>
                     <button id="tab2" class="tab-btn">模式2: 目标色导入</button>
                     <button id="tab3" class="tab-btn">模式3: 计算光通量需求</button>
-                    <button id="tab4" class="tab-btn">模式4: 计算最大光通量</button>
                 </div>
                 
                 <div id="mode1" class="tab-content active">
@@ -79,12 +78,6 @@
                                 </div>
                             </div>
                             
-                            <div class="preset-controls">
-                                <select id="red-presets" class="preset-select">
-                                    <option value="">选择预设...</option>
-                                </select>
-                                <button id="save-red-preset" class="preset-btn">保存当前值</button>
-                            </div>
                         </div>
                         
                         <div class="color-input green">
@@ -129,12 +122,6 @@
                                 </div>
                             </div>
                             
-                            <div class="preset-controls">
-                                <select id="green-presets" class="preset-select">
-                                    <option value="">选择预设...</option>
-                                </select>
-                                <button id="save-green-preset" class="preset-btn">保存当前值</button>
-                            </div>
                         </div>
                         
                         <div class="color-input blue">
@@ -179,12 +166,6 @@
                                 </div>
                             </div>
                             
-                            <div class="preset-controls">
-                                <select id="blue-presets" class="preset-select">
-                                    <option value="">选择预设...</option>
-                                </select>
-                                <button id="save-blue-preset" class="preset-btn">保存当前值</button>
-                            </div>
                         </div>
                     </div>
                     
@@ -229,33 +210,6 @@
                         </div>
                     </div>
                     
-                    <div class="target-color-selection">
-                        <h3>选择目标色</h3>
-                        <div class="target-selector">
-                            <div class="input-group">
-                                <label>从Excel数据选择:</label>
-                                <select id="excel-target-selector" class="preset-select">
-                                    <option value="">请先导入Excel数据...</option>
-                                </select>
-                            </div>
-                            <div class="target-color">
-                                <div class="input-group">
-                                    <label>目标色 x 坐标:</label>
-                                    <input type="number" id="target-x" step="0.0001" min="0" max="1" value="0.3333">
-                                </div>
-                                <div class="input-group">
-                                    <label>目标色 y 坐标:</label>
-                                    <input type="number" id="target-y" step="0.0001" min="0" max="1" value="0.3333">
-                                </div>
-                                <div class="preset-controls">
-                                    <select id="target-presets" class="preset-select">
-                                        <option value="">选择预设...</option>
-                                    </select>
-                                    <button id="save-target-preset" class="preset-btn">保存当前值</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     
                     <div class="excel-table-section">
                         <h3>颜色数据表</h3>
@@ -267,36 +221,69 @@
                 
                 <div id="mode3" class="tab-content">
                     <h2>计算光通量需求</h2>
-                    <div class="target-color">
-                        <div class="input-group">
-                            <label>目标光通量 (Lv):</label>
-                            <input type="number" id="target-lv" step="0.1" min="0" value="30">
-                            <span class="max-lv-hint" id="max-lv-hint">最大可达: 计算中...</span>
+                    
+                    <div class="target-color-selection">
+                        <h3>目标色选择</h3>
+                        
+                        <!-- 手动输入目标色 -->
+                        <div class="manual-target-input">
+                            <h4>手动输入目标色</h4>
+                            <div class="input-group">
+                                <label>目标色 x 坐标:</label>
+                                <input type="number" id="manual-target-x" step="0.0001" min="0" max="1" value="0.3333">
+                            </div>
+                            <div class="input-group">
+                                <label>目标色 y 坐标:</label>
+                                <input type="number" id="manual-target-y" step="0.0001" min="0" max="1" value="0.3333">
+                            </div>
+                            <div class="input-group">
+                                <label>目标光通量 (Lv):</label>
+                                <input type="number" id="manual-target-lv" step="0.1" min="0" value="30">
+                                <span class="max-lv-hint" id="manual-max-lv-hint">最大可达: 计算中...</span>
+                            </div>
+                            <button id="add-manual-target" class="upload-btn">添加到目标列表</button>
+                        </div>
+                        
+                        <!-- 从Excel数据选择 -->
+                        <div class="excel-target-selection">
+                            <h4>从Excel数据选择</h4>
+                            <div class="input-group">
+                                <label>颜色:</label>
+                                <select id="excel-target-selector" class="preset-select">
+                                    <option value="">请先导入Excel数据...</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>目标光通量 (Lv):</label>
+                                <input type="number" id="excel-target-lv" step="0.1" min="0" value="30">
+                                <span class="max-lv-hint" id="excel-max-lv-hint">最大可达: 计算中...</span>
+                            </div>
+                            <button id="add-excel-target" class="upload-btn">添加到目标列表</button>
+                        </div>
+                        
+                        <!-- 已选目标色列表 -->
+                        <div class="selected-targets">
+                            <h4>已选目标色</h4>
+                            <div id="target-list" class="target-list">
+                                <p class="empty-hint">尚未添加任何目标色</p>
+                            </div>
+                            <button id="clear-all-targets" class="clear-btn">清空所有目标</button>
                         </div>
                     </div>
                     
-                    <p class="mode-note">注意：RGB三基色坐标使用模式1中的设置，目标色坐标使用模式2中的设置</p>
+                    <p class="mode-note">注意：RGB三基色坐标使用模式1中的设置</p>
                     
                     <button id="calculate-lv" class="calc-btn">计算所需光通量</button>
                     
                     <div class="result">
                         <h3>计算结果</h3>
-                        <div class="result-item">
-                            <span>红色所需光通量:</span>
-                            <span id="red-lv-result">-</span>
-                        </div>
-                        <div class="result-item">
-                            <span>绿色所需光通量:</span>
-                            <span id="green-lv-result">-</span>
-                        </div>
-                        <div class="result-item">
-                            <span>蓝色所需光通量:</span>
-                            <span id="blue-lv-result">-</span>
+                        <div id="mode3-results">
+                            <p class="empty-hint">请先添加目标色并点击计算</p>
                         </div>
                     </div>
                 </div>
                 
-                <div id="mode4" class="tab-content">
+                <div id="mode4" class="tab-content" style="display: none;">
                     <h2>计算最大光通量</h2>
                     <p class="mode-note">RGB三基色坐标使用模式1中的设置，此处仅设置各基色的最大光通量</p>
                     <div class="color-inputs">
