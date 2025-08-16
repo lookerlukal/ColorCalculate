@@ -211,6 +211,26 @@
                     </div>
                     
                     
+                    <!-- LED BIN色域边界检测 -->
+                    <div class="gamut-boundary-section">
+                        <h3>LED BIN色域边界检测</h3>
+                        <div class="gamut-boundary-controls">
+                            <div class="gamut-info">
+                                <p class="gamut-status" id="gamut-status">
+                                    请先在Step1中为红、绿、蓝三色都选择LED分BIN数据
+                                </p>
+                            </div>
+                            <div class="gamut-actions">
+                                <button id="check-gamut-boundary" class="gamut-btn" disabled>
+                                    判断是否超色域边界
+                                </button>
+                                <div class="gamut-results" id="gamut-results" style="display: none;">
+                                    <span class="gamut-summary"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="excel-table-section">
                         <h3>颜色数据表</h3>
                         <div id="color-table-container">

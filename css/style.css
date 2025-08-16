@@ -1023,4 +1023,167 @@ input[type="number"] {
 
 .led-enable-group input[type="checkbox"]:hover {
     transform: scale(1.1);
+}
+
+/* =================== 色域边界检测样式 =================== */
+
+.gamut-boundary-section {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+}
+
+.gamut-boundary-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.gamut-info {
+    flex: 1;
+}
+
+.gamut-status {
+    margin: 0;
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.gamut-status.enabled {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.gamut-status.disabled {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.gamut-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.gamut-btn {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.gamut-btn:hover:not(:disabled) {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+.gamut-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.gamut-results {
+    padding: 10px;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+}
+
+.gamut-summary {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.gamut-summary .in-gamut {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.gamut-summary .out-of-gamut {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+/* =================== 表格色域状态样式 =================== */
+
+.gamut-status-cell {
+    text-align: center;
+    font-size: 12px;
+}
+
+.gamut-status {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.gamut-status.unknown {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+.gamut-status.in-gamut {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.gamut-status.out-of-gamut {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* 超边界颜色行样式 */
+.color-row.out-of-gamut {
+    background-color: #fff5f5;
+}
+
+.color-row.out-of-gamut .name-cell.out-of-gamut {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.color-row.out-of-gamut:hover {
+    background-color: #ffe6e6;
+}
+
+/* 筛选复选框样式增强 */
+#show-out-of-gamut-only {
+    margin-left: 15px;
+}
+
+.view-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .gamut-boundary-controls {
+        flex-direction: column;
+    }
+    
+    .gamut-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .view-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
 } 

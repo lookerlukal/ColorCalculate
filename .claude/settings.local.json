@@ -15,7 +15,8 @@
       "Bash(node:*)",
       "Bash(git commit:*)",
       "Bash(git branch:*)",
-      "mcp__ide__executeCode"
+      "mcp__ide__executeCode",
+      "Bash(git tag:*)"
     ],
     "deny": []
   }

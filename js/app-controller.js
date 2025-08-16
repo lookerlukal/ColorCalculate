@@ -216,6 +216,9 @@ const ColorCalculatorApp = {
         // Excel导入相关事件
         this.bindExcelEvents();
         
+        // 色域边界检测事件
+        this.bindGamutCheckEvents();
+        
         // 模式3多选目标色事件
         this.bindMode3Events();
     },
@@ -1226,6 +1229,9 @@ const ColorCalculatorApp = {
             // 选择不完整，隐藏信息
             this.hideLEDInfo(color);
         }
+        
+        // 更新色域状态显示
+        this.onLEDBinSelectionUpdate();
     },
     
     // 显示LED信息
@@ -1443,6 +1449,150 @@ const ColorCalculatorApp = {
         } catch (error) {
             console.warn('计算最大光通量失败:', error);
             return 0;
+        }
+    },
+    
+    // =================== 色域边界检测功能 ===================
+    
+    // 绑定色域检测事件
+    bindGamutCheckEvents() {
+        const checkButton = document.getElementById('check-gamut-boundary');
+        if (checkButton) {
+            checkButton.addEventListener('click', () => {
+                this.performGamutBoundaryCheck();
+            });
+        }
+    },
+    
+    // 执行色域边界检测
+    performGamutBoundaryCheck() {
+        try {
+            // 检查是否有导入的颜色数据
+            const colorData = ExcelLoader.getColorData();
+            if (!colorData || colorData.length === 0) {
+                NotificationSystem.error('请先导入颜色数据');
+                return;
+            }
+            
+            // 检查LED BIN模式是否启用
+            if (!LEDBinManager.isLEDBinModeEnabled()) {
+                NotificationSystem.error('请先在Step1中为红、绿、蓝三色都选择LED分BIN数据');
+                return;
+            }
+            
+            // 执行色域边界检测
+            const checkResult = ColorCalculator.checkGamutBoundaryForTargets(colorData);
+            
+            if (!checkResult.success) {
+                NotificationSystem.error(checkResult.error);
+                return;
+            }
+            
+            // 更新表格显示检测结果
+            if (typeof ColorTable !== 'undefined') {
+                ColorTable.updateGamutCheckResults(checkResult);
+            }
+            
+            // 更新色域状态显示
+            this.updateGamutStatusDisplay(checkResult);
+            
+            // 显示检测结果摘要
+            this.showGamutCheckSummary(checkResult);
+            
+            Logger.info(`色域边界检测完成: ${checkResult.summary.outOfGamut}/${checkResult.summary.total} 个颜色超边界`, 'GamutCheck');
+            
+        } catch (error) {
+            ErrorHandler.handle(error, 'performGamutBoundaryCheck');
+        }
+    },
+    
+    // 更新色域状态显示
+    updateGamutStatusDisplay(checkResult) {
+        const statusElement = document.getElementById('gamut-status');
+        const resultsElement = document.getElementById('gamut-results');
+        
+        if (statusElement) {
+            const binStatus = LEDBinManager.getLEDBinStatus();
+            const gamut = binStatus.gamut;
+            
+            if (gamut) {
+                statusElement.innerHTML = `
+                    LED BIN色域已确定 - 红(${binStatus.ledStatus.red.colorBin}), 
+                    绿(${binStatus.ledStatus.green.colorBin}), 
+                    蓝(${binStatus.ledStatus.blue.colorBin})
+                `;
+                statusElement.className = 'gamut-status enabled';
+            }
+        }
+        
+        if (resultsElement) {
+            resultsElement.style.display = 'block';
+        }
+        
+        // 启用检测按钮
+        const checkButton = document.getElementById('check-gamut-boundary');
+        if (checkButton) {
+            checkButton.disabled = false;
+        }
+    },
+    
+    // 显示色域检测结果摘要
+    showGamutCheckSummary(checkResult) {
+        const resultsElement = document.getElementById('gamut-results');
+        if (!resultsElement) return;
+        
+        const summaryElement = resultsElement.querySelector('.gamut-summary');
+        if (!summaryElement) return;
+        
+        const summary = checkResult.summary;
+        summaryElement.innerHTML = `
+            检测完成: ${summary.total} 个颜色中，
+            <span class="in-gamut">${summary.inGamut} 个在色域内</span>，
+            <span class="out-of-gamut">${summary.outOfGamut} 个超出边界</span>
+            (覆盖率: ${summary.percentage}%)
+        `;
+        
+        if (summary.outOfGamut > 0) {
+            NotificationSystem.warning(`发现 ${summary.outOfGamut} 个超色域边界的颜色，已在表格中标红显示`);
+        } else {
+            NotificationSystem.success('所有颜色都在LED BIN色域范围内');
+        }
+    },
+    
+    // 监听LED BIN选择变化，更新色域状态
+    onLEDBinSelectionUpdate() {
+        const statusElement = document.getElementById('gamut-status');
+        const checkButton = document.getElementById('check-gamut-boundary');
+        const resultsElement = document.getElementById('gamut-results');
+        
+        if (!statusElement || !checkButton) return;
+        
+        const binStatus = LEDBinManager.getLEDBinStatus();
+        
+        if (binStatus.allEnabled && binStatus.gamut) {
+            // LED BIN模式完全启用
+            statusElement.innerHTML = `
+                LED BIN色域已确定 - 红(${binStatus.ledStatus.red.colorBin}), 
+                绿(${binStatus.ledStatus.green.colorBin}), 
+                蓝(${binStatus.ledStatus.blue.colorBin})
+            `;
+            statusElement.className = 'gamut-status enabled';
+            checkButton.disabled = false;
+        } else {
+            // LED BIN模式未完全启用
+            statusElement.innerHTML = '请先在Step1中为红、绿、蓝三色都选择LED分BIN数据';
+            statusElement.className = 'gamut-status disabled';
+            checkButton.disabled = true;
+            
+            // 隐藏检测结果
+            if (resultsElement) {
+                resultsElement.style.display = 'none';
+            }
+            
+            // 清除表格中的色域检测结果
+            if (typeof ColorTable !== 'undefined') {
+                ColorTable.clearGamutCheckResults();
+            }
         }
     }
 };
