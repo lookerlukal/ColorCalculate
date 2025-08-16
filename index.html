@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>色彩合成计算器</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- SheetJS库用于Excel文件处理 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -29,6 +31,7 @@
                     <button id="tab1" class="tab-btn active">模式1: 计算混合结果</button>
                     <button id="tab2" class="tab-btn">模式2: 计算光通量需求</button>
                     <button id="tab3" class="tab-btn">模式3: 计算最大光通量</button>
+                    <button id="tab4" class="tab-btn">模式4: Excel数据导入</button>
                 </div>
                 
                 <div id="mode1" class="tab-content active">
@@ -221,6 +224,36 @@
                         </div>
                     </div>
                 </div>
+                
+                <div id="mode4" class="tab-content">
+                    <h2>Excel数据导入</h2>
+                    <div class="excel-import-section">
+                        <div class="file-upload">
+                            <h3>导入Excel文件</h3>
+                            <div class="upload-controls">
+                                <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
+                                <button id="select-excel-btn" class="upload-btn">选择Excel文件</button>
+                                <button id="load-default-btn" class="upload-btn secondary">加载默认数据</button>
+                            </div>
+                            <div class="upload-info">
+                                <small>支持.xlsx和.xls格式，要求包含ID、X坐标、Y坐标三列数据</small>
+                            </div>
+                        </div>
+                        
+                        <div class="data-display">
+                            <div class="data-stats" id="excel-data-stats">
+                                <span>未加载数据</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="excel-table-section">
+                        <h3>颜色数据表</h3>
+                        <div id="color-table-container">
+                            <!-- 表格将由ColorTable组件动态生成 -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -231,6 +264,8 @@
     <script src="js/notification.js"></script>
     <script src="js/color-calculator.js"></script>
     <script src="js/chart-renderer.js"></script>
+    <script src="js/excel-loader.js"></script>
+    <script src="js/color-table.js"></script>
     <script src="js/app-controller.js"></script>
     <script src="js/script.js"></script>
     <script src="js/debug.js"></script>

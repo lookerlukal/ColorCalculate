@@ -272,6 +272,11 @@ const ChartRenderer = {
     drawColorPoints(colorPoints, activeMode) {
         const config = ColorCalculatorConfig;
         
+        // 绘制Excel导入的数据点（在主要点之前绘制，作为背景）
+        if (activeMode === 'mode4' || (typeof ExcelLoader !== 'undefined' && ExcelLoader.isDataLoaded)) {
+            this.drawExcelDataPoints();
+        }
+        
         // 绘制RGB三基色点
         this.drawPoint(colorPoints.red, '#FF0000', 'R');
         this.drawPoint(colorPoints.green, '#00FF00', 'G');
@@ -513,5 +518,153 @@ const ChartRenderer = {
     invalidateCache() {
         this.needsRedraw = true;
         this.preRenderBackground();
+    },
+    
+    // 绘制Excel导入的数据点
+    drawExcelDataPoints() {
+        if (typeof ExcelLoader === 'undefined' || !ExcelLoader.isDataLoaded) {
+            return;
+        }
+        
+        const visibleColors = ExcelLoader.getVisibleColors();
+        const highlightedColor = ExcelLoader.getHighlightedColor();
+        
+        // 批量绘制普通数据点
+        this.ctx.save();
+        
+        // 普通点的样式
+        const normalRadius = ColorCalculatorConfig.colorPoints.normal.radius;
+        const highlightRadius = ColorCalculatorConfig.colorPoints.highlighted.radius;
+        
+        // 绘制普通可见点
+        visibleColors.forEach(color => {
+            if (!color.highlighted) {
+                this.drawExcelDataPoint(color, normalRadius, false);
+            }
+        });
+        
+        // 绘制高亮点（在最上层）
+        if (highlightedColor) {
+            this.drawExcelDataPoint(highlightedColor, highlightRadius, true);
+        }
+        
+        this.ctx.restore();
+    },
+    
+    // 绘制单个Excel数据点
+    drawExcelDataPoint(colorData, radius, isHighlighted) {
+        const config = ColorCalculatorConfig.canvas;
+        const screenCoords = this.cieToScreenCoordinates(colorData.x, colorData.y, config.width, config.height);
+        
+        // 检查点是否在可见区域内
+        if (screenCoords.x < 0 || screenCoords.x > config.width || 
+            screenCoords.y < 0 || screenCoords.y > config.height) {
+            return;
+        }
+        
+        this.ctx.save();
+        
+        if (isHighlighted) {
+            // 高亮点样式
+            // 绘制光晕效果
+            const glowRadius = ColorCalculatorConfig.colorPoints.highlighted.glowRadius;
+            const gradient = this.ctx.createRadialGradient(
+                screenCoords.x, screenCoords.y, 0,
+                screenCoords.x, screenCoords.y, radius + glowRadius
+            );
+            gradient.addColorStop(0, ColorCalculatorConfig.colorPoints.highlighted.glowColor);
+            gradient.addColorStop(0.7, 'rgba(255, 255, 0, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 0, 0)');
+            
+            this.ctx.fillStyle = gradient;
+            this.ctx.beginPath();
+            this.ctx.arc(screenCoords.x, screenCoords.y, radius + glowRadius, 0, 2 * Math.PI);
+            this.ctx.fill();
+            
+            // 绘制高亮点
+            this.ctx.fillStyle = ColorCalculatorConfig.colorPoints.highlighted.fillColor;
+            this.ctx.beginPath();
+            this.ctx.arc(screenCoords.x, screenCoords.y, radius, 0, 2 * Math.PI);
+            this.ctx.fill();
+            
+            // 绘制边框
+            this.ctx.strokeStyle = ColorCalculatorConfig.colorPoints.highlighted.strokeColor;
+            this.ctx.lineWidth = ColorCalculatorConfig.colorPoints.highlighted.strokeWidth;
+            this.ctx.beginPath();
+            this.ctx.arc(screenCoords.x, screenCoords.y, radius, 0, 2 * Math.PI);
+            this.ctx.stroke();
+            
+            // 绘制标签
+            this.ctx.fillStyle = '#000';
+            this.ctx.font = '12px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'bottom';
+            this.ctx.fillText(colorData.name, screenCoords.x, screenCoords.y - radius - 8);
+            
+            // 绘制坐标信息
+            this.ctx.font = '10px Arial';
+            this.ctx.fillText(
+                `(${colorData.x.toFixed(4)}, ${colorData.y.toFixed(4)})`, 
+                screenCoords.x, 
+                screenCoords.y + radius + 15
+            );
+        } else {
+            // 普通点样式
+            // 根据色坐标计算颜色
+            const rgb = this.xyToRGB(colorData.x, colorData.y);
+            const pointColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+            
+            // 绘制点
+            this.ctx.fillStyle = pointColor;
+            this.ctx.beginPath();
+            this.ctx.arc(screenCoords.x, screenCoords.y, radius, 0, 2 * Math.PI);
+            this.ctx.fill();
+            
+            // 绘制边框
+            this.ctx.strokeStyle = ColorCalculatorConfig.colorPoints.normal.strokeColor;
+            this.ctx.lineWidth = ColorCalculatorConfig.colorPoints.normal.strokeWidth;
+            this.ctx.beginPath();
+            this.ctx.arc(screenCoords.x, screenCoords.y, radius, 0, 2 * Math.PI);
+            this.ctx.stroke();
+        }
+        
+        this.ctx.restore();
+    },
+    
+    // 查找鼠标位置附近的Excel数据点
+    findExcelDataPointAt(screenX, screenY, tolerance = ColorCalculatorConfig.colorPoints.clickTolerance) {
+        if (typeof ExcelLoader === 'undefined' || !ExcelLoader.isDataLoaded) {
+            return null;
+        }
+        
+        const config = ColorCalculatorConfig.canvas;
+        const visibleColors = ExcelLoader.getVisibleColors();
+        
+        for (const color of visibleColors) {
+            const screenCoords = this.cieToScreenCoordinates(color.x, color.y, config.width, config.height);
+            const distance = Math.sqrt(
+                Math.pow(screenX - screenCoords.x, 2) + 
+                Math.pow(screenY - screenCoords.y, 2)
+            );
+            
+            if (distance <= tolerance) {
+                return color;
+            }
+        }
+        
+        return null;
+    },
+    
+    // 获取Excel数据点的悬停信息
+    getExcelDataPointTooltip(colorData) {
+        return {
+            title: colorData.name,
+            lines: [
+                `ID: ${colorData.id}`,
+                `X: ${colorData.x.toFixed(4)}`,
+                `Y: ${colorData.y.toFixed(4)}`,
+                '点击高亮显示'
+            ]
+        };
     }
 };

@@ -82,13 +82,66 @@ const ColorCalculatorConfig = {
         calculation: 6    // 计算精度
     },
 
+    // Excel导入相关配置
+    excel: {
+        maxFileSize: 10 * 1024 * 1024, // 10MB
+        supportedFormats: ['.xlsx', '.xls'],
+        supportedMimeTypes: [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel'
+        ],
+        defaultDataPath: './InputData/目标色.xlsx',
+        expectedColumns: {
+            id: 0,        // 第1列：序号/ID
+            x: 1,         // 第2列：X坐标
+            y: 2          // 第3列：Y坐标
+        },
+        dataValidation: {
+            minCoordinate: 0,
+            maxCoordinate: 1,
+            maxDataPoints: 1000
+        }
+    },
+    
+    // 颜色表格配置
+    colorTable: {
+        pageSize: 20,           // 每页显示的行数
+        maxPageSize: 100,       // 最大页面大小
+        searchDebounceTime: 300, // 搜索防抖时间（毫秒）
+        colorPreviewSize: 16,   // 颜色预览方块大小
+        highlightDuration: 2000 // 高亮持续时间（毫秒）
+    },
+    
+    // 颜色点绘制配置
+    colorPoints: {
+        normal: {
+            radius: 2,
+            strokeWidth: 0.5,
+            strokeColor: 'rgba(0, 0, 0, 0.6)'
+        },
+        highlighted: {
+            radius: 6,
+            strokeWidth: 2,
+            strokeColor: '#FF8C00',
+            fillColor: '#FFD700',
+            glowRadius: 4,
+            glowColor: 'rgba(255, 255, 0, 0.8)'
+        },
+        clickTolerance: 10      // 点击检测容忍度（像素）
+    },
+
     // 错误消息
     errorMessages: {
         invalidInput: '输入值无效，请检查数值范围',
         calculationFailed: '计算失败，请检查输入参数',
         browserNotSupported: '浏览器不支持所需功能',
         canvasNotSupported: '浏览器不支持Canvas API',
-        storageNotSupported: '浏览器不支持本地存储功能'
+        storageNotSupported: '浏览器不支持本地存储功能',
+        excelParsingFailed: 'Excel文件解析失败，请检查文件格式',
+        fileNotSupported: '不支持的文件格式，请选择.xlsx或.xls文件',
+        fileTooLarge: '文件过大，请选择小于10MB的文件',
+        noValidData: '文件中没有找到有效的颜色数据',
+        dataOutOfRange: '数据超出有效范围，坐标值应在0-1之间'
     }
 };
 
