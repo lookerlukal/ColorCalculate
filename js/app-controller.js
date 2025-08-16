@@ -1209,7 +1209,7 @@ const ColorCalculatorApp = {
         
         // 重置Excel输入
         mode3Elements.excelSelector.value = '';
-        mode3Elements.excelLv.value = '30';
+        mode3Elements.excelLv.value = '1';
         
         NotificationSystem.success('已添加目标色');
     },
@@ -1262,7 +1262,7 @@ const ColorCalculatorApp = {
         const mode3Elements = this.elements.inputs.mode3;
         if (mode3Elements.manualX) mode3Elements.manualX.value = '0.3333';
         if (mode3Elements.manualY) mode3Elements.manualY.value = '0.3333';
-        if (mode3Elements.manualLv) mode3Elements.manualLv.value = '30';
+        if (mode3Elements.manualLv) mode3Elements.manualLv.value = '1';
     },
     
     // 更新模式3的最大光通量提示
@@ -1296,21 +1296,12 @@ const ColorCalculatorApp = {
     // 计算指定目标色的最大光通量（使用模式1的RGB数据）
     calculateMaxLuminanceForTarget(targetX, targetY) {
         try {
-            // 获取模式4中的最大光通量设置（如果有）
+            // 使用模式1中当前设置的RGB光通量值
             const maxLvValues = {
-                red: 100,
-                green: 100,
-                blue: 100
+                red: this.state.colorPoints.red.lv,
+                green: this.state.colorPoints.green.lv,
+                blue: this.state.colorPoints.blue.lv
             };
-            
-            // 尝试从模式4的输入框获取实际值
-            const redMaxInput = document.getElementById('red-max-lv');
-            const greenMaxInput = document.getElementById('green-max-lv');
-            const blueMaxInput = document.getElementById('blue-max-lv');
-            
-            if (redMaxInput) maxLvValues.red = parseFloat(redMaxInput.value) || 100;
-            if (greenMaxInput) maxLvValues.green = parseFloat(greenMaxInput.value) || 100;
-            if (blueMaxInput) maxLvValues.blue = parseFloat(blueMaxInput.value) || 100;
             
             // 构造完整的colorPoints对象
             const colorPoints = {

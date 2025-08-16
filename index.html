@@ -28,9 +28,9 @@
             
             <div class="control-panel">
                 <div class="tabs">
-                    <button id="tab1" class="tab-btn active">模式1: 计算混合结果</button>
-                    <button id="tab2" class="tab-btn">模式2: 目标色导入</button>
-                    <button id="tab3" class="tab-btn">模式3: 计算光通量需求</button>
+                    <button id="tab1" class="tab-btn active">Step 1: 计算混合结果</button>
+                    <button id="tab2" class="tab-btn">Step 2: 目标色导入</button>
+                    <button id="tab3" class="tab-btn">Step 3: 计算光通量需求</button>
                 </div>
                 
                 <div id="mode1" class="tab-content active">
@@ -238,7 +238,7 @@
                             </div>
                             <div class="input-group">
                                 <label>目标光通量 (Lv):</label>
-                                <input type="number" id="manual-target-lv" step="0.1" min="0" value="30">
+                                <input type="number" id="manual-target-lv" step="0.1" min="0" value="1">
                                 <span class="max-lv-hint" id="manual-max-lv-hint">最大可达: 计算中...</span>
                             </div>
                             <button id="add-manual-target" class="upload-btn">添加到目标列表</button>
@@ -255,7 +255,7 @@
                             </div>
                             <div class="input-group">
                                 <label>目标光通量 (Lv):</label>
-                                <input type="number" id="excel-target-lv" step="0.1" min="0" value="30">
+                                <input type="number" id="excel-target-lv" step="0.1" min="0" value="1">
                                 <span class="max-lv-hint" id="excel-max-lv-hint">最大可达: 计算中...</span>
                             </div>
                             <button id="add-excel-target" class="upload-btn">添加到目标列表</button>

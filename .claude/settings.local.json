@@ -14,7 +14,8 @@
       "Bash(python:*)",
       "Bash(node:*)",
       "Bash(git commit:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "mcp__ide__executeCode"
     ],
     "deny": []
   }

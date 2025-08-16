@@ -93,52 +93,130 @@ const ColorCalculator = {
             
             // 使用传入的最大光通量值，如果没有则使用配置文件中的默认值
             const maxLv = maxLvValues || ColorCalculatorConfig.slider.maxLvValues;
-            let maxLuminance = 0;
-            let bestRatio = { red: 0, green: 0, blue: 0 };
             
-            // 优化算法：使用网格搜索
-            const steps = 20; // 搜索精度
-            for (let rStep = 0; rStep <= steps; rStep++) {
-                for (let gStep = 0; gStep <= steps; gStep++) {
-                    for (let bStep = 0; bStep <= steps; bStep++) {
-                        const testRed = { ...red, lv: (rStep / steps) * maxLv.red };
-                        const testGreen = { ...green, lv: (gStep / steps) * maxLv.green };
-                        const testBlue = { ...blue, lv: (bStep / steps) * maxLv.blue };
-                        
-                        const mixResult = this.calculateMixedColor({
-                            red: testRed,
-                            green: testGreen,
-                            blue: testBlue
-                        });
-                        
-                        // 检查是否接近目标色
-                        const tolerance = 0.01;
-                        if (Math.abs(mixResult.x - target.x) < tolerance && 
-                            Math.abs(mixResult.y - target.y) < tolerance &&
-                            mixResult.lv > maxLuminance) {
-                            maxLuminance = mixResult.lv;
-                            bestRatio = {
-                                red: testRed.lv,
-                                green: testGreen.lv,
-                                blue: testBlue.lv
-                            };
-                        }
-                    }
-                }
-            }
+            // 使用线性优化算法替代网格搜索
+            return this.optimizeMaxLuminance(red, green, blue, target, maxLv);
             
-            return {
-                maxLuminance: this.roundToPrecision(maxLuminance, ColorCalculatorConfig.precision.luminance),
-                ratio: {
-                    red: this.roundToPrecision(bestRatio.red, ColorCalculatorConfig.precision.luminance),
-                    green: this.roundToPrecision(bestRatio.green, ColorCalculatorConfig.precision.luminance),
-                    blue: this.roundToPrecision(bestRatio.blue, ColorCalculatorConfig.precision.luminance)
-                }
-            };
         } catch (error) {
             ErrorHandler.handle(error, 'ColorCalculator.calculateMaxLuminance');
             return { maxLuminance: 0, ratio: { red: 0, green: 0, blue: 0 } };
         }
+    },
+    
+    // 线性优化算法计算最大光通量
+    optimizeMaxLuminance(red, green, blue, target, maxLv) {
+        let maxLuminance = 0;
+        let bestRatio = { red: 0, green: 0, blue: 0 };
+        
+        // 使用参数化方法：设Blue为参数t，求解Red和Green
+        // 混合色坐标方程：
+        // x_t * (Lr + Lg + Lb) = x_r * Lr + x_g * Lg + x_b * Lb
+        // y_t * (Lr + Lg + Lb) = y_r * Lr + y_g * Lg + y_b * Lb
+        // 
+        // 简化为：
+        // (x_r - x_t) * Lr + (x_g - x_t) * Lg = (x_t - x_b) * Lb
+        // (y_r - y_t) * Lr + (y_g - y_t) * Lg = (y_t - y_b) * Lb
+        
+        const samples = 2000; // 高精度采样
+        
+        for (let i = 0; i <= samples; i++) {
+            const lb = (i / samples) * maxLv.blue;
+            
+            // 构建线性方程组求解Lr和Lg
+            const A = [
+                [red.x - target.x, green.x - target.x],
+                [red.y - target.y, green.y - target.y]
+            ];
+            
+            const b = [
+                (target.x - blue.x) * lb,
+                (target.y - blue.y) * lb
+            ];
+            
+            // 求解2x2线性方程组
+            const det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+            
+            if (Math.abs(det) < 1e-10) {
+                continue; // 矩阵奇异，跳过
+            }
+            
+            const lr = (b[0] * A[1][1] - b[1] * A[0][1]) / det;
+            const lg = (A[0][0] * b[1] - A[1][0] * b[0]) / det;
+            
+            // 检查约束条件
+            if (lr >= 0 && lr <= maxLv.red && lg >= 0 && lg <= maxLv.green && lb >= 0) {
+                const totalLv = lr + lg + lb;
+                
+                // 验证混合色是否准确匹配目标色
+                if (totalLv > 0) {
+                    const mixX = (red.x * lr + green.x * lg + blue.x * lb) / totalLv;
+                    const mixY = (red.y * lr + green.y * lg + blue.y * lb) / totalLv;
+                    
+                    const errorX = Math.abs(mixX - target.x);
+                    const errorY = Math.abs(mixY - target.y);
+                    
+                    // 使用更严格的容差
+                    if (errorX < 0.001 && errorY < 0.001) {
+                        if (totalLv > maxLuminance) {
+                            maxLuminance = totalLv;
+                            bestRatio = { red: lr, green: lg, blue: lb };
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 如果没有找到解，尝试其他参数化方式（Red为参数）
+        if (maxLuminance === 0) {
+            for (let i = 0; i <= samples; i++) {
+                const lr = (i / samples) * maxLv.red;
+                
+                const A = [
+                    [green.x - target.x, blue.x - target.x],
+                    [green.y - target.y, blue.y - target.y]
+                ];
+                
+                const b = [
+                    (target.x - red.x) * lr,
+                    (target.y - red.y) * lr
+                ];
+                
+                const det = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+                
+                if (Math.abs(det) < 1e-10) continue;
+                
+                const lg = (b[0] * A[1][1] - b[1] * A[0][1]) / det;
+                const lb = (A[0][0] * b[1] - A[1][0] * b[0]) / det;
+                
+                if (lg >= 0 && lg <= maxLv.green && lb >= 0 && lb <= maxLv.blue && lr >= 0) {
+                    const totalLv = lr + lg + lb;
+                    
+                    if (totalLv > 0) {
+                        const mixX = (red.x * lr + green.x * lg + blue.x * lb) / totalLv;
+                        const mixY = (red.y * lr + green.y * lg + blue.y * lb) / totalLv;
+                        
+                        const errorX = Math.abs(mixX - target.x);
+                        const errorY = Math.abs(mixY - target.y);
+                        
+                        if (errorX < 0.001 && errorY < 0.001) {
+                            if (totalLv > maxLuminance) {
+                                maxLuminance = totalLv;
+                                bestRatio = { red: lr, green: lg, blue: lb };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return {
+            maxLuminance: this.roundToPrecision(maxLuminance, ColorCalculatorConfig.precision.luminance),
+            ratio: {
+                red: this.roundToPrecision(bestRatio.red, ColorCalculatorConfig.precision.luminance),
+                green: this.roundToPrecision(bestRatio.green, ColorCalculatorConfig.precision.luminance),
+                blue: this.roundToPrecision(bestRatio.blue, ColorCalculatorConfig.precision.luminance)
+            }
+        };
     },
     
     // 线性方程组求解器（高斯消元法）
