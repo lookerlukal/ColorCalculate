@@ -18,6 +18,9 @@
       "mcp__ide__executeCode",
       "Bash(git tag:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "D:\\d D:\\softtest\\CURSE"
+    ]
   }
 }

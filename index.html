@@ -56,7 +56,7 @@
                                 <div class="led-enable-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="red-led-enable">
-                                        <span>使用LED分BIN数据</span>
+                                        <span>OSRAM_LRTB GVSR</span>
                                     </label>
                                 </div>
                                 <div class="led-selection-group" style="display: none;">
@@ -100,7 +100,7 @@
                                 <div class="led-enable-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="green-led-enable">
-                                        <span>使用LED分BIN数据</span>
+                                        <span>OSRAM_LRTB GVSR</span>
                                     </label>
                                 </div>
                                 <div class="led-selection-group" style="display: none;">
@@ -144,7 +144,7 @@
                                 <div class="led-enable-group">
                                     <label class="checkbox-label">
                                         <input type="checkbox" id="blue-led-enable">
-                                        <span>使用LED分BIN数据</span>
+                                        <span>OSRAM_LRTB GVSR</span>
                                     </label>
                                 </div>
                                 <div class="led-selection-group" style="display: none;">
@@ -189,46 +189,19 @@
                 </div>
                 
                 <div id="mode2" class="tab-content">
-                    <h2>目标色导入</h2>
-                    <div class="excel-import-section">
-                        <div class="file-upload">
-                            <h3>导入Excel文件</h3>
-                            <div class="upload-controls">
-                                <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
-                                <button id="select-excel-btn" class="upload-btn">选择Excel文件</button>
-                                <button id="load-default-btn" class="upload-btn secondary">加载默认数据</button>
-                            </div>
-                            <div class="upload-info">
-                                <small>支持.xlsx和.xls格式，要求包含ID、X坐标、Y坐标三列数据</small>
-                            </div>
-                        </div>
-                        
-                        <div class="data-display">
-                            <div class="data-stats" id="excel-data-stats">
-                                <span>未加载数据</span>
-                            </div>
-                        </div>
+                    <div class="title-with-button">
+                        <h2>目标色导入</h2>
+                        <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
+                        <button id="select-excel-btn" class="upload-btn compact">选择EXCEL</button>
                     </div>
                     
                     
                     <!-- LED BIN色域边界检测 -->
-                    <div class="gamut-boundary-section">
+                    <div class="title-with-button">
                         <h3>LED BIN色域边界检测</h3>
-                        <div class="gamut-boundary-controls">
-                            <div class="gamut-info">
-                                <p class="gamut-status" id="gamut-status">
-                                    请先在Step1中为红、绿、蓝三色都选择LED分BIN数据
-                                </p>
-                            </div>
-                            <div class="gamut-actions">
-                                <button id="check-gamut-boundary" class="gamut-btn" disabled>
-                                    判断是否超色域边界
-                                </button>
-                                <div class="gamut-results" id="gamut-results" style="display: none;">
-                                    <span class="gamut-summary"></span>
-                                </div>
-                            </div>
-                        </div>
+                        <button id="check-gamut-boundary" class="gamut-btn" disabled>
+                            判断是否超色域边界
+                        </button>
                     </div>
                     
                     <div class="excel-table-section">
@@ -381,5 +354,39 @@
     <script src="js/script.js"></script>
     <script src="js/debug.js"></script>
     <script src="test-console.js"></script>
+    
+    <!-- Excel数据统计弹窗 -->
+    <div id="excel-stats-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Excel数据导入成功</h3>
+            </div>
+            <div class="modal-body">
+                <div class="stats-grid" id="excel-stats-content">
+                    <!-- 动态填充统计信息 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="excel-stats-confirm" class="modal-btn">确认</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 色域检测结果弹窗 -->
+    <div id="gamut-check-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>色域边界检测结果</h3>
+            </div>
+            <div class="modal-body">
+                <div class="gamut-check-content" id="gamut-check-content">
+                    <!-- 动态填充检测结果 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="gamut-check-confirm" class="modal-btn">确认</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 
