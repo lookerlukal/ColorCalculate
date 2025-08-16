@@ -36,7 +36,6 @@ const ColorCalculatorConfig = {
         red: { x: 0.7, y: 0.3, lv: 10 },
         green: { x: 0.2, y: 0.7, lv: 10 },
         blue: { x: 0.1, y: 0.1, lv: 10 },
-        target: { x: 0.3333, y: 0.3333, lv: 30 },
         mix: { x: 0, y: 0, lv: 0 }
     },
 

@@ -295,8 +295,6 @@ const ChartRenderer = {
         // 根据模式绘制其他点
         if (activeMode === 'mode1') {
             this.drawPoint(colorPoints.mix, '#FF00FF', 'Mix');
-        } else if (activeMode === 'mode2' || activeMode === 'mode3') {
-            this.drawPoint(colorPoints.target, '#FFA500', 'Target');
         }
     },
     

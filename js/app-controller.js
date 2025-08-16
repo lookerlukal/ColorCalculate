@@ -535,9 +535,7 @@ const ColorCalculatorApp = {
         const tolerance = 15; // 点击容差
         
         const pointNames = ['red', 'green', 'blue'];
-        if (this.state.activeMode === 'mode2' || this.state.activeMode === 'mode3') {
-            pointNames.push('target');
-        } else if (this.state.activeMode === 'mode1') {
+        if (this.state.activeMode === 'mode1') {
             pointNames.push('mix');
         }
         
@@ -999,18 +997,6 @@ const ColorCalculatorApp = {
     // 从Excel数据设置目标色
     setTargetColorFromExcel(color) {
         try {
-            // 更新目标色坐标
-            this.state.colorPoints.target.x = color.x;
-            this.state.colorPoints.target.y = color.y;
-            
-            // 更新输入框显示
-            if (this.elements.inputs.target.x) {
-                this.elements.inputs.target.x.value = this.formatValue(color.x, 'coordinate');
-            }
-            if (this.elements.inputs.target.y) {
-                this.elements.inputs.target.y.value = this.formatValue(color.y, 'coordinate');
-            }
-            
             // Excel目标色选择器更新已移到模式3中处理
             
             // 更新最大光通量提示
