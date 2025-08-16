@@ -69,7 +69,9 @@ const ColorCalculatorConfig = {
     // 界面设置
     ui: {
         defaultMode: 'mode1',
-        showGamutBoundaries: true,
+        showSRGBGamut: true,
+        showNTSCGamut: true,
+        showLEDBinGamut: false,
         pointRadius: 8,
         lineWidth: 2,
         gridAlpha: 0.3

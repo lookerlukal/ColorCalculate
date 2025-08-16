@@ -60,7 +60,7 @@ const ChartRenderer = {
     },
     
     // 主绘制函数
-    draw(colorPoints, activeMode, showGamutBoundaries) {
+    draw(colorPoints, activeMode, showSRGBGamut, showNTSCGamut, showLEDBinGamut) {
         const config = ColorCalculatorConfig.canvas;
         
         // 清空画布
@@ -78,9 +78,7 @@ const ChartRenderer = {
         }
         
         // 绘制色域边界
-        if (showGamutBoundaries) {
-            this.drawColorSpaceBoundaries();
-        }
+        this.drawColorSpaceBoundaries(showSRGBGamut, showNTSCGamut, showLEDBinGamut);
         
         // 绘制LED BIN区域
         if (typeof LEDBinManager !== 'undefined' && ColorCalculatorConfig.ledBin.display.showBinAreas) {
@@ -228,19 +226,23 @@ const ChartRenderer = {
     },
     
     // 绘制色域边界
-    drawColorSpaceBoundaries() {
-        if (!ColorCalculatorConfig.ui.showGamutBoundaries) return;
-        
+    drawColorSpaceBoundaries(showSRGBGamut, showNTSCGamut, showLEDBinGamut) {
         const colorSpaces = ColorCalculatorConfig.colorSpaces;
         
         // 绘制 sRGB 色域
-        this.drawTriangle(colorSpaces.srgb, '#0066cc', 'sRGB');
+        if (showSRGBGamut) {
+            this.drawTriangle(colorSpaces.srgb, '#0066cc', 'sRGB');
+        }
         
         // 绘制 NTSC 色域
-        this.drawTriangle(colorSpaces.ntsc, '#cc0066', 'NTSC');
+        if (showNTSCGamut) {
+            this.drawTriangle(colorSpaces.ntsc, '#cc0066', 'NTSC');
+        }
         
         // 绘制LED BIN最小色域
-        this.drawLEDBinMinimumGamut();
+        if (showLEDBinGamut) {
+            this.drawLEDBinMinimumGamut();
+        }
     },
     
     drawTriangle(colorSpace, color, label) {

@@ -2,7 +2,7 @@
 // 注意：大部分功能已迁移到新的模块化架构中
 
 // 为了保持向后兼容，保留一些全局变量的引用
-let colorPoints, draggingPoint, draggingSlider, activeMode, sliderStepSize, showGamutBoundaries;
+let colorPoints, draggingPoint, draggingSlider, activeMode, sliderStepSize, showSRGBGamut, showNTSCGamut, showLEDBinGamut;
 let canvas, ctx;
 
 // 初始化兼容性层
@@ -14,7 +14,9 @@ function initCompatibilityLayer() {
         draggingSlider = ColorCalculatorApp.state.draggingSlider;
         activeMode = ColorCalculatorApp.state.activeMode;
         sliderStepSize = ColorCalculatorApp.state.sliderStepSize;
-        showGamutBoundaries = ColorCalculatorApp.state.showGamutBoundaries;
+        showSRGBGamut = ColorCalculatorApp.state.showSRGBGamut;
+        showNTSCGamut = ColorCalculatorApp.state.showNTSCGamut;
+        showLEDBinGamut = ColorCalculatorApp.state.showLEDBinGamut;
         
         canvas = ColorCalculatorApp.elements.canvas;
         if (canvas) {

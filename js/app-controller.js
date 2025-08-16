@@ -7,7 +7,9 @@ const ColorCalculatorApp = {
         draggingPoint: null,
         draggingSlider: null,
         sliderStepSize: 1.0,
-        showGamutBoundaries: true
+        showSRGBGamut: true,
+        showNTSCGamut: true,
+        showLEDBinGamut: false
     },
     
     // DOM 元素引用
@@ -45,7 +47,9 @@ const ColorCalculatorApp = {
     initializeState() {
         this.state.colorPoints = { ...ColorCalculatorConfig.defaultColorPoints };
         this.state.sliderStepSize = ColorCalculatorConfig.slider.defaultStepSize;
-        this.state.showGamutBoundaries = ColorCalculatorConfig.ui.showGamutBoundaries;
+        this.state.showSRGBGamut = ColorCalculatorConfig.ui.showSRGBGamut;
+        this.state.showNTSCGamut = ColorCalculatorConfig.ui.showNTSCGamut;
+        this.state.showLEDBinGamut = ColorCalculatorConfig.ui.showLEDBinGamut;
         this.state.debugMode = false; // 调试模式，可通过控制台设置 ColorCalculatorApp.state.debugMode = true
     },
     
@@ -203,11 +207,29 @@ const ColorCalculatorApp = {
         this.bindKeyboardEvents();
         
         // 色域显示开关
-        const gamutToggle = document.getElementById('show-gamut');
-        if (gamutToggle) {
-            gamutToggle.addEventListener('change', (e) => {
-                this.state.showGamutBoundaries = e.target.checked;
-                Logger.info(`色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+        const srgbToggle = document.getElementById('show-srgb-gamut');
+        if (srgbToggle) {
+            srgbToggle.addEventListener('change', (e) => {
+                this.state.showSRGBGamut = e.target.checked;
+                Logger.info(`sRGB色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+                this.updateDisplay();
+            });
+        }
+        
+        const ntscToggle = document.getElementById('show-ntsc-gamut');
+        if (ntscToggle) {
+            ntscToggle.addEventListener('change', (e) => {
+                this.state.showNTSCGamut = e.target.checked;
+                Logger.info(`NTSC色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
+                this.updateDisplay();
+            });
+        }
+        
+        const ledbinToggle = document.getElementById('show-ledbin-gamut');
+        if (ledbinToggle) {
+            ledbinToggle.addEventListener('change', (e) => {
+                this.state.showLEDBinGamut = e.target.checked;
+                Logger.info(`LED BIN最小色域显示: ${e.target.checked ? '开启' : '关闭'}`, 'UI');
                 this.updateDisplay();
             });
         }
@@ -869,7 +891,8 @@ const ColorCalculatorApp = {
     
     // 更新显示
     updateDisplay() {
-        ChartRenderer.draw(this.state.colorPoints, this.state.activeMode, this.state.showGamutBoundaries);
+        ChartRenderer.draw(this.state.colorPoints, this.state.activeMode, 
+            this.state.showSRGBGamut, this.state.showNTSCGamut, this.state.showLEDBinGamut);
         this.updateInputs();
         
         // 如果开启调试模式，绘制调试信息
@@ -1645,6 +1668,7 @@ const ColorCalculatorApp = {
     // 监听LED BIN选择变化，更新色域按钮状态和图表显示
     onLEDBinSelectionUpdate() {
         const checkButton = document.getElementById('check-gamut-boundary');
+        const ledbinToggle = document.getElementById('show-ledbin-gamut');
         
         if (checkButton) {
             const binStatus = LEDBinManager.getLEDBinStatus();
@@ -1652,9 +1676,21 @@ const ColorCalculatorApp = {
             if (binStatus.allEnabled && binStatus.gamut) {
                 // LED BIN模式完全启用，启用检测按钮
                 checkButton.disabled = false;
+                
+                // 启用LED BIN色域显示选项
+                if (ledbinToggle) {
+                    ledbinToggle.disabled = false;
+                }
             } else {
                 // LED BIN模式未完全启用，禁用检测按钮
                 checkButton.disabled = true;
+                
+                // 禁用并取消勾选LED BIN色域显示选项
+                if (ledbinToggle) {
+                    ledbinToggle.disabled = true;
+                    ledbinToggle.checked = false;
+                    this.state.showLEDBinGamut = false;
+                }
                 
                 // 清除表格中的色域检测结果
                 if (typeof ColorTable !== 'undefined') {
