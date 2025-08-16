@@ -76,14 +76,14 @@ canvas {
     display: inline-flex;
     align-items: center;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     color: #495057;
-    gap: 8px;
+    gap: 6px;
 }
 
 .checkbox-label input[type="checkbox"] {
     margin: 0;
-    transform: scale(1.2);
+    transform: scale(1.0);
 }
 
 .checkbox-label:hover {
@@ -459,6 +459,34 @@ input[type="number"] {
     text-align: center;
 }
 
+/* 标题与按钮布局 */
+.title-with-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.title-with-button h2 {
+    margin: 0;
+}
+
+.upload-btn.compact {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    white-space: nowrap;
+}
+
+.upload-btn.compact:hover {
+    background-color: #0056b3;
+}
+
 /* Excel导入相关样式 */
 .excel-import-section {
     margin-bottom: 20px;
@@ -534,6 +562,11 @@ input[type="number"] {
     margin-top: 20px;
 }
 
+.excel-table-section h3 {
+    margin-bottom: 5px;
+    margin-top: 10px;
+}
+
 .color-table-wrapper {
     background-color: #fff;
     border-radius: 8px;
@@ -543,48 +576,56 @@ input[type="number"] {
 
 .table-controls {
     background-color: #f8f9fa;
-    padding: 15px;
+    padding: 8px 12px;
     border-bottom: 1px solid #dee2e6;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 8px;
 }
 
-.search-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+/* 不再需要search-controls样式，因为HTML结构已改变 */
 
 .search-input {
-    padding: 6px 12px;
+    padding: 4px 8px;
     border: 1px solid #ced4da;
     border-radius: 4px;
-    font-size: 14px;
-    min-width: 200px;
+    font-size: 13px;
+    min-width: 160px;
 }
 
 .clear-btn {
     background-color: #6c757d;
     color: white;
     border: none;
-    padding: 6px 12px;
+    padding: 4px 10px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .clear-btn:hover {
     background-color: #545b62;
 }
 
-.view-controls {
-    display: flex;
+/* 高亮控制区域样式 */
+.highlight-controls {
+    display: inline-flex;
     align-items: center;
     gap: 10px;
+    margin-left: 15px;
 }
+
+.highlight-count {
+    font-size: 12px;
+    color: #6c757d;
+    background-color: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 3px;
+    border: 1px solid #dee2e6;
+}
+
+/* 不再需要view-controls样式，因为HTML结构已改变 */
 
 .table-container {
     max-height: 400px;
@@ -677,15 +718,22 @@ input[type="number"] {
     text-align: center;
 }
 
+.action-cell {
+    white-space: nowrap;
+}
+
 .action-btn {
     background: none;
     border: 1px solid #dee2e6;
     border-radius: 3px;
-    padding: 2px 6px;
-    margin: 0 2px;
+    padding: 4px 8px;
+    margin: 0 1px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 14px;
     transition: all 0.2s;
+    display: inline-block;
+    min-width: 32px;
+    text-align: center;
 }
 
 .action-btn:hover {
@@ -703,6 +751,17 @@ input[type="number"] {
 }
 
 .highlight-btn.active {
+    color: #ffc107;
+    border-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.highlight-btn:not(.active) {
+    color: #6c757d;
+    border-color: #dee2e6;
+}
+
+.highlight-btn:not(.active):hover {
     color: #ffc107;
     border-color: #ffc107;
 }
@@ -769,17 +828,14 @@ input[type="number"] {
 /* 响应式设计 */
 @media (max-width: 768px) {
     .table-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .search-controls {
-        flex-direction: column;
-        align-items: stretch;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 6px;
     }
     
     .search-input {
-        min-width: auto;
+        min-width: 120px;
+        flex: 1;
     }
     
     .upload-controls {
@@ -1185,5 +1241,281 @@ input[type="number"] {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }
+}
+
+/* =================== 弹窗样式 =================== */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* 兼容性样式 */
+    -webkit-justify-content: center;
+    -webkit-align-items: center;
+    /* 强制居中 */
+    text-align: center;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.3s ease-out;
+    /* 确保内容居中 */
+    position: relative;
+    margin: auto;
+    text-align: left;
+    /* 防止弹窗超出视口 */
+    max-width: min(500px, 90vw);
+    max-height: min(80vh, 600px);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    padding: 20px 24px 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #495057;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 20px 24px;
+}
+
+.stats-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stats-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+.stats-label {
+    font-weight: 500;
+    color: #495057;
+    font-size: 14px;
+}
+
+.stats-value {
+    font-weight: 600;
+    color: #007bff;
+    font-size: 14px;
+}
+
+.modal-footer {
+    padding: 15px 24px 20px;
+    text-align: center;
+    border-top: 1px solid #e9ecef;
+}
+
+.modal-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+    min-width: 80px;
+}
+
+.modal-btn:hover {
+    background-color: #0056b3;
+}
+
+.modal-btn:active {
+    transform: translateY(1px);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    
+    .stats-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .title-with-button {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .title-with-button h2 {
+        margin-bottom: 0;
+    }
+}
+
+/* =================== 色域检测弹窗样式 =================== */
+
+.gamut-check-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.gamut-led-info h4,
+.gamut-check-results h4 {
+    margin: 0 0 12px 0;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 8px;
+}
+
+.led-config-grid,
+.check-result-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.led-config-item,
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.led-config-item {
+    background-color: #f8f9fa;
+    border-left: 4px solid #6c757d;
+}
+
+.config-label,
+.result-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.config-value,
+.result-value {
+    font-weight: 600;
+}
+
+.result-item.success {
+    background-color: #e7f3ff;
+    border-left: 4px solid #007bff;
+}
+
+.result-item.success .result-value {
+    color: #007bff;
+}
+
+.result-item.in-gamut {
+    background-color: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
+.result-item.in-gamut .result-value {
+    color: #28a745;
+}
+
+.result-item.out-of-gamut {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+.result-item.out-of-gamut .result-value {
+    color: #dc3545;
+}
+
+.result-item.coverage {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.result-item.coverage .result-value {
+    color: #856404;
+}
+
+.gamut-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.gamut-btn:hover:not(:disabled) {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+.gamut-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .gamut-check-content {
+        gap: 15px;
+    }
+    
+    .led-config-item,
+    .result-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
     }
 } 

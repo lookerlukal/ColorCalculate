@@ -38,19 +38,19 @@ const ColorTable = {
         this.elements.container.innerHTML = `
             <div class="color-table-wrapper">
                 <div class="table-controls">
-                    <div class="search-controls">
-                        <input type="text" id="color-search" placeholder="搜索颜色ID或名称..." class="search-input">
-                        <button id="clear-search" class="clear-btn">清除</button>
-                    </div>
-                    <div class="view-controls">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="show-all-colors" checked>
-                            <span>显示所有颜色点</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="show-out-of-gamut-only">
-                            <span>仅显示超色域颜色</span>
-                        </label>
+                    <input type="text" id="color-search" placeholder="搜索颜色ID或名称..." class="search-input">
+                    <button id="clear-search" class="clear-btn">清除</button>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-all-colors" checked>
+                        <span>所有颜色</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-out-of-gamut-only">
+                        <span>色域外</span>
+                    </label>
+                    <div class="highlight-controls">
+                        <span id="highlight-count" class="highlight-count">已选择: 0</span>
+                        <button id="clear-highlights" class="clear-btn">清除高亮</button>
                     </div>
                 </div>
                 
@@ -122,6 +122,12 @@ const ColorTable = {
             this.filterAndRender();
         });
         
+        // 清除所有高亮
+        document.getElementById('clear-highlights').addEventListener('click', () => {
+            ExcelLoader.clearAllHighlights();
+            this.updateHighlightCount();
+        });
+        
         // 表格排序
         this.elements.table.addEventListener('click', (e) => {
             if (e.target.classList.contains('sortable') || e.target.parentElement.classList.contains('sortable')) {
@@ -176,6 +182,16 @@ const ColorTable = {
             const newHighlightState = !color.highlighted;
             ExcelLoader.setColorHighlight(colorId, newHighlightState);
             this.renderCurrentPage();
+            this.updateHighlightCount();
+        }
+    },
+    
+    // 更新高亮计数
+    updateHighlightCount() {
+        const highlightCountElement = document.getElementById('highlight-count');
+        if (highlightCountElement) {
+            const count = ExcelLoader.getHighlightedColors().length;
+            highlightCountElement.textContent = `已选择: ${count}`;
         }
     },
     
@@ -305,6 +321,9 @@ const ColorTable = {
             const row = this.createTableRow(color);
             this.elements.tbody.appendChild(row);
         });
+        
+        // 更新高亮计数
+        this.updateHighlightCount();
     },
     
     // 创建表格行
