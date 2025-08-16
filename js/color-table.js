@@ -187,7 +187,7 @@ const ColorTable = {
                 name: color.name,
                 x: color.x,
                 y: color.y,
-                lv: 30, // 默认光通量
+                lv: 1, // 默认光通量
                 type: 'excel',
                 originalId: colorId
             };
