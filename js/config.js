@@ -130,6 +130,46 @@ const ColorCalculatorConfig = {
         clickTolerance: 10      // 点击检测容忍度（像素）
     },
 
+    // LED分BIN相关配置
+    ledBin: {
+        // BIN区域显示样式
+        display: {
+            showBinAreas: true,      // 是否显示BIN区域
+            showBinLabels: true,     // 是否显示BIN标签
+            animateSelection: true    // 选择时是否动画
+        },
+        colors: {
+            red: {
+                fill: 'rgba(255, 0, 0, 0.15)',      // 红色BIN填充色
+                stroke: 'rgba(255, 0, 0, 0.8)',     // 红色BIN边框色
+                strokeWidth: 1.5
+            },
+            green: {
+                fill: 'rgba(0, 255, 0, 0.15)',      // 绿色BIN填充色
+                stroke: 'rgba(0, 255, 0, 0.8)',     // 绿色BIN边框色
+                strokeWidth: 1.5
+            },
+            blue: {
+                fill: 'rgba(0, 0, 255, 0.15)',      // 蓝色BIN填充色
+                stroke: 'rgba(0, 0, 255, 0.8)',     // 蓝色BIN边框色
+                strokeWidth: 1.5
+            },
+            selected: {
+                fill: 'rgba(255, 255, 0, 0.3)',     // 选中BIN高亮填充色
+                stroke: 'rgba(255, 255, 0, 1.0)',   // 选中BIN高亮边框色
+                strokeWidth: 2.5,
+                shadowBlur: 6,
+                shadowColor: 'rgba(255, 255, 0, 0.6)'
+            }
+        },
+        ui: {
+            enableLEDSelection: true,    // 是否启用LED选择功能
+            defaultEnabled: false,       // 默认是否启用LED模式
+            showWavelengthInfo: true,    // 是否显示波长信息
+            compactMode: false           // 紧凑模式（较小的选择器）
+        }
+    },
+
     // 错误消息
     errorMessages: {
         invalidInput: '输入值无效，请检查数值范围',

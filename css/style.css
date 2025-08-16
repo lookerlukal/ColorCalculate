@@ -616,4 +616,195 @@ input[type="number"] {
     .pagination {
         justify-content: center;
     }
+}
+
+/* =================== LED分BIN选择器样式 =================== */
+
+.led-bin-selector {
+    margin: 15px 0;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.led-enable-group {
+    margin-bottom: 10px;
+}
+
+.led-enable-group .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: #495057;
+    cursor: pointer;
+}
+
+.led-enable-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #007bff;
+}
+
+.led-selection-group {
+    padding-top: 10px;
+    border-top: 1px solid #e9ecef;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.led-bin-group {
+    margin-bottom: 10px;
+}
+
+.led-bin-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 13px;
+}
+
+.led-select {
+    width: 100%;
+    padding: 6px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: 13px;
+    color: #495057;
+    transition: all 0.2s ease;
+}
+
+.led-select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.led-select:hover {
+    border-color: #adb5bd;
+}
+
+.led-info {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background-color: #e7f3ff;
+    border: 1px solid #b8daff;
+    border-radius: 4px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.led-wavelength-info {
+    color: #0056b3;
+    font-size: 12px;
+    line-height: 1.4;
+    display: block;
+}
+
+/* 不同颜色的LED选择器主题 */
+.color-input.red .led-bin-selector {
+    border-left: 4px solid #dc3545;
+}
+
+.color-input.green .led-bin-selector {
+    border-left: 4px solid #28a745;
+}
+
+.color-input.blue .led-bin-selector {
+    border-left: 4px solid #007bff;
+}
+
+.color-input.red .led-info {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.color-input.red .led-wavelength-info {
+    color: #721c24;
+}
+
+.color-input.green .led-info {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.color-input.green .led-wavelength-info {
+    color: #155724;
+}
+
+.color-input.blue .led-info {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+.color-input.blue .led-wavelength-info {
+    color: #0c5460;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .led-bin-selector {
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    .led-select {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+    
+    .led-wavelength-info {
+        font-size: 11px;
+    }
+}
+
+/* LED选择器禁用状态 */
+.led-bin-selector.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.led-bin-selector.disabled .led-select {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+/* 工具提示样式增强 */
+.led-select option:hover {
+    background-color: #f8f9fa;
+}
+
+/* 选择器动画效果 */
+.led-select {
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.led-enable-group input[type="checkbox"] {
+    transition: all 0.2s ease;
+}
+
+.led-enable-group input[type="checkbox"]:hover {
+    transform: scale(1.1);
 } 

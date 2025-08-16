@@ -82,7 +82,12 @@ const ColorCalculatorApp = {
                 lv: document.getElementById(`${color}-lv`),
                 maxLv: document.getElementById(`${color}-max-lv`), // 模式3的最大光通量
                 presets: document.getElementById(`${color}-presets`),
-                saveBtn: document.getElementById(`save-${color}-preset`)
+                saveBtn: document.getElementById(`save-${color}-preset`),
+                // LED分BIN选择器元素
+                ledEnable: document.getElementById(`${color}-led-enable`),
+                ledLuminanceBin: document.getElementById(`${color}-luminance-bin`),
+                ledColorBin: document.getElementById(`${color}-color-bin`),
+                ledInfo: document.getElementById(`${color}-led-info`)
             };
         });
         
@@ -129,6 +134,12 @@ const ColorCalculatorApp = {
         // 初始化图表渲染器
         ChartRenderer.init(this.elements.canvas);
         
+        // 初始化LED分BIN管理器
+        if (typeof LEDBinManager !== 'undefined') {
+            LEDBinManager.init();
+            this.initializeLEDSelectors(); // 初始化LED选择器
+        }
+        
         // 初始化预设管理器
         if (typeof PresetManager !== 'undefined') {
             PresetManager.init();
@@ -159,6 +170,9 @@ const ColorCalculatorApp = {
         
         // 输入框事件
         this.bindInputEvents();
+        
+        // LED选择器事件
+        this.bindLEDEvents();
         
         // 键盘事件
         this.bindKeyboardEvents();
@@ -749,6 +763,172 @@ const ColorCalculatorApp = {
         }
         
         return false;
+    },
+    
+    // =================== LED分BIN功能 ===================
+    
+    // 初始化LED选择器
+    initializeLEDSelectors() {
+        const colors = ['red', 'green', 'blue'];
+        
+        colors.forEach(color => {
+            this.populateLEDSelectors(color);
+        });
+    },
+    
+    // 填充LED选择器选项
+    populateLEDSelectors(color) {
+        const elements = this.elements.inputs[color];
+        if (!elements || !elements.ledLuminanceBin || !elements.ledColorBin) return;
+        
+        // 填充亮度BIN选项
+        const luminanceBins = LEDBinManager.getLuminanceBins(color);
+        elements.ledLuminanceBin.innerHTML = '<option value="">选择亮度BIN...</option>';
+        luminanceBins.forEach(bin => {
+            const option = document.createElement('option');
+            option.value = bin.id;
+            option.textContent = `${bin.id} (${bin.min.toFixed(1)}-${bin.max.toFixed(1)} lm)`;
+            option.title = bin.description || '';
+            elements.ledLuminanceBin.appendChild(option);
+        });
+        
+        // 填充色度BIN选项
+        const colorBins = LEDBinManager.getColorBinList(color);
+        elements.ledColorBin.innerHTML = '<option value="">选择色度BIN...</option>';
+        colorBins.forEach(binId => {
+            const wavelengthInfo = LEDBinManager.getWavelengthBin(color, binId);
+            const option = document.createElement('option');
+            option.value = binId;
+            option.textContent = binId;
+            if (wavelengthInfo) {
+                option.textContent += ` (${wavelengthInfo.min}-${wavelengthInfo.max}nm)`;
+            }
+            elements.ledColorBin.appendChild(option);
+        });
+    },
+    
+    // 绑定LED事件
+    bindLEDEvents() {
+        const colors = ['red', 'green', 'blue'];
+        
+        colors.forEach(color => {
+            const elements = this.elements.inputs[color];
+            if (!elements) return;
+            
+            // LED启用复选框事件
+            if (elements.ledEnable) {
+                elements.ledEnable.addEventListener('change', (e) => {
+                    this.onLEDEnableChange(color, e.target.checked);
+                });
+            }
+            
+            // 亮度BIN选择事件
+            if (elements.ledLuminanceBin) {
+                elements.ledLuminanceBin.addEventListener('change', (e) => {
+                    this.onLEDBinSelectionChange(color);
+                });
+            }
+            
+            // 色度BIN选择事件
+            if (elements.ledColorBin) {
+                elements.ledColorBin.addEventListener('change', (e) => {
+                    this.onLEDBinSelectionChange(color);
+                });
+            }
+        });
+    },
+    
+    // LED启用状态改变处理
+    onLEDEnableChange(color, enabled) {
+        const elements = this.elements.inputs[color];
+        if (!elements) return;
+        
+        const selectionGroup = elements.ledColorBin?.closest('.led-selection-group');
+        if (selectionGroup) {
+            selectionGroup.style.display = enabled ? 'block' : 'none';
+        }
+        
+        if (!enabled) {
+            // 禁用时清除选择
+            LEDBinManager.clearSelection(color);
+            if (elements.ledLuminanceBin) elements.ledLuminanceBin.value = '';
+            if (elements.ledColorBin) elements.ledColorBin.value = '';
+            this.hideLEDInfo(color);
+            this.updateDisplay();
+        }
+    },
+    
+    // LED BIN选择改变处理
+    onLEDBinSelectionChange(color) {
+        const elements = this.elements.inputs[color];
+        if (!elements) return;
+        
+        const luminanceBin = elements.ledLuminanceBin?.value;
+        const colorBin = elements.ledColorBin?.value;
+        
+        if (luminanceBin && colorBin) {
+            // 两个BIN都选择了，更新LEDBinManager和输入框
+            LEDBinManager.setSelection(color, luminanceBin, colorBin);
+            const params = LEDBinManager.getSelectedLEDParams(color);
+            
+            if (params) {
+                // 更新坐标和亮度输入框
+                if (elements.x) elements.x.value = params.x.toFixed(4);
+                if (elements.y) elements.y.value = params.y.toFixed(4);
+                if (elements.lv) elements.lv.value = params.lv.toFixed(1);
+                
+                // 更新状态
+                this.state.colorPoints[color] = {
+                    x: params.x,
+                    y: params.y,
+                    lv: params.lv
+                };
+                
+                // 显示LED信息
+                this.showLEDInfo(color, params);
+                
+                // 重新计算和显示
+                this.performCalculation();
+                this.updateDisplay();
+                
+                Logger.info(`LED BIN选择: ${color} - 亮度:${luminanceBin}, 色度:${colorBin}`, 'LEDSelection');
+            }
+        } else {
+            // 选择不完整，隐藏信息
+            this.hideLEDInfo(color);
+        }
+    },
+    
+    // 显示LED信息
+    showLEDInfo(color, params) {
+        const elements = this.elements.inputs[color];
+        if (!elements || !elements.ledInfo) return;
+        
+        const wavelengthInfo = LEDBinManager.getWavelengthBin(color, params.colorBin);
+        const luminanceBin = LEDBinManager.getLuminanceBins(color).find(b => b.id === params.luminanceBin);
+        
+        let infoText = `中心坐标: (${params.x.toFixed(4)}, ${params.y.toFixed(4)})`;
+        if (wavelengthInfo) {
+            infoText += ` | 波长: ${wavelengthInfo.min}-${wavelengthInfo.max}nm`;
+        }
+        if (luminanceBin) {
+            infoText += ` | 光通量: ${params.lv.toFixed(1)}lm`;
+        }
+        
+        const infoElement = elements.ledInfo.querySelector('.led-wavelength-info');
+        if (infoElement) {
+            infoElement.textContent = infoText;
+        }
+        
+        elements.ledInfo.style.display = 'block';
+    },
+    
+    // 隐藏LED信息
+    hideLEDInfo(color) {
+        const elements = this.elements.inputs[color];
+        if (elements && elements.ledInfo) {
+            elements.ledInfo.style.display = 'none';
+        }
     }
 };
 

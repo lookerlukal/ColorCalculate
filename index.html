@@ -51,6 +51,34 @@
                                 <label>光通量 (Lv):</label>
                                 <input type="number" id="red-lv" step="0.1" min="0" value="10">
                             </div>
+                            
+                            <!-- LED分BIN选择器 -->
+                            <div class="led-bin-selector" id="red-led-selector">
+                                <div class="led-enable-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="red-led-enable">
+                                        <span>使用LED分BIN数据</span>
+                                    </label>
+                                </div>
+                                <div class="led-selection-group" style="display: none;">
+                                    <div class="led-bin-group">
+                                        <label>亮度BIN:</label>
+                                        <select id="red-luminance-bin" class="led-select">
+                                            <option value="">选择亮度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-bin-group">
+                                        <label>色度BIN:</label>
+                                        <select id="red-color-bin" class="led-select">
+                                            <option value="">选择色度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-info" id="red-led-info" style="display: none;">
+                                        <small class="led-wavelength-info"></small>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="preset-controls">
                                 <select id="red-presets" class="preset-select">
                                     <option value="">选择预设...</option>
@@ -73,6 +101,34 @@
                                 <label>光通量 (Lv):</label>
                                 <input type="number" id="green-lv" step="0.1" min="0" value="10">
                             </div>
+                            
+                            <!-- LED分BIN选择器 -->
+                            <div class="led-bin-selector" id="green-led-selector">
+                                <div class="led-enable-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="green-led-enable">
+                                        <span>使用LED分BIN数据</span>
+                                    </label>
+                                </div>
+                                <div class="led-selection-group" style="display: none;">
+                                    <div class="led-bin-group">
+                                        <label>亮度BIN:</label>
+                                        <select id="green-luminance-bin" class="led-select">
+                                            <option value="">选择亮度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-bin-group">
+                                        <label>色度BIN:</label>
+                                        <select id="green-color-bin" class="led-select">
+                                            <option value="">选择色度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-info" id="green-led-info" style="display: none;">
+                                        <small class="led-wavelength-info"></small>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="preset-controls">
                                 <select id="green-presets" class="preset-select">
                                     <option value="">选择预设...</option>
@@ -95,6 +151,34 @@
                                 <label>光通量 (Lv):</label>
                                 <input type="number" id="blue-lv" step="0.1" min="0" value="10">
                             </div>
+                            
+                            <!-- LED分BIN选择器 -->
+                            <div class="led-bin-selector" id="blue-led-selector">
+                                <div class="led-enable-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="blue-led-enable">
+                                        <span>使用LED分BIN数据</span>
+                                    </label>
+                                </div>
+                                <div class="led-selection-group" style="display: none;">
+                                    <div class="led-bin-group">
+                                        <label>亮度BIN:</label>
+                                        <select id="blue-luminance-bin" class="led-select">
+                                            <option value="">选择亮度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-bin-group">
+                                        <label>色度BIN:</label>
+                                        <select id="blue-color-bin" class="led-select">
+                                            <option value="">选择色度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-info" id="blue-led-info" style="display: none;">
+                                        <small class="led-wavelength-info"></small>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="preset-controls">
                                 <select id="blue-presets" class="preset-select">
                                     <option value="">选择预设...</option>
@@ -260,6 +344,7 @@
     
     <!-- Core modules (load in order) -->
     <script src="js/config.js"></script>
+    <script src="js/led-bin-manager.js"></script>
     <script src="js/logger.js"></script>
     <script src="js/notification.js"></script>
     <script src="js/color-calculator.js"></script>
