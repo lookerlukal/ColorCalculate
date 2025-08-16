@@ -82,6 +82,11 @@ const ChartRenderer = {
             this.drawColorSpaceBoundaries();
         }
         
+        // 绘制LED BIN区域
+        if (typeof LEDBinManager !== 'undefined' && ColorCalculatorConfig.ledBin.display.showBinAreas) {
+            this.drawLEDBinAreas();
+        }
+        
         // 绘制颜色点和连线
         this.drawColorPoints(colorPoints, activeMode);
         this.drawConnections(colorPoints, activeMode);
@@ -604,7 +609,7 @@ const ChartRenderer = {
             // 绘制坐标信息
             this.ctx.font = '10px Arial';
             this.ctx.fillText(
-                `(${colorData.x.toFixed(4)}, ${colorData.y.toFixed(4)})`, 
+                `(${PrecisionFormatter.formatValue(colorData.x, 'coordinate')}, ${PrecisionFormatter.formatValue(colorData.y, 'coordinate')})`, 
                 screenCoords.x, 
                 screenCoords.y + radius + 15
             );
@@ -661,10 +666,150 @@ const ChartRenderer = {
             title: colorData.name,
             lines: [
                 `ID: ${colorData.id}`,
-                `X: ${colorData.x.toFixed(4)}`,
-                `Y: ${colorData.y.toFixed(4)}`,
+                `X: ${PrecisionFormatter.formatValue(colorData.x, 'coordinate')}`,
+                `Y: ${PrecisionFormatter.formatValue(colorData.y, 'coordinate')}`,
                 '点击高亮显示'
             ]
         };
+    },
+    
+    // =================== LED BIN区域绘制方法 ===================
+    
+    // 绘制所有LED BIN区域
+    drawLEDBinAreas() {
+        const colors = ['red', 'green', 'blue'];
+        
+        colors.forEach(color => {
+            const selection = LEDBinManager.getSelection(color);
+            if (selection.colorBin) {
+                this.drawColorBin(color, selection.colorBin, true); // 选中的BIN高亮显示
+            }
+        });
+    },
+    
+    // 绘制单个色度BIN区域
+    drawColorBin(color, binId, isSelected = false) {
+        const coords = LEDBinManager.getColorBinCoordinates(color, binId);
+        if (!coords || coords.length < 3) return;
+        
+        const config = ColorCalculatorConfig.canvas;
+        const ledConfig = ColorCalculatorConfig.ledBin.colors;
+        
+        // 获取样式配置
+        const style = isSelected ? ledConfig.selected : ledConfig[color];
+        
+        // 转换为屏幕坐标
+        const screenCoords = coords.map(point => 
+            this.cieToScreenCoordinates(point.x, point.y, config.width, config.height)
+        );
+        
+        // 绘制填充区域
+        this.ctx.beginPath();
+        this.ctx.moveTo(screenCoords[0].x, screenCoords[0].y);
+        for (let i = 1; i < screenCoords.length; i++) {
+            this.ctx.lineTo(screenCoords[i].x, screenCoords[i].y);
+        }
+        this.ctx.closePath();
+        
+        // 设置填充样式
+        this.ctx.fillStyle = style.fill;
+        this.ctx.fill();
+        
+        // 设置边框样式
+        this.ctx.strokeStyle = style.stroke;
+        this.ctx.lineWidth = style.strokeWidth;
+        this.ctx.setLineDash([]); // 实线
+        
+        // 添加阴影效果（仅对选中的BIN）
+        if (isSelected && style.shadowBlur) {
+            this.ctx.shadowBlur = style.shadowBlur;
+            this.ctx.shadowColor = style.shadowColor;
+        }
+        
+        this.ctx.stroke();
+        
+        // 重置阴影
+        this.ctx.shadowBlur = 0;
+        
+        // 绘制BIN标签
+        if (ColorCalculatorConfig.ledBin.display.showBinLabels) {
+            this.drawBinLabel(screenCoords, binId, color, isSelected);
+        }
+    },
+    
+    // 绘制BIN标签
+    drawBinLabel(screenCoords, binId, color, isSelected) {
+        // 计算标签位置（多边形中心）
+        const centerX = screenCoords.reduce((sum, coord) => sum + coord.x, 0) / screenCoords.length;
+        const centerY = screenCoords.reduce((sum, coord) => sum + coord.y, 0) / screenCoords.length;
+        
+        // 设置文本样式
+        this.ctx.font = isSelected ? 'bold 11px Arial' : '10px Arial';
+        this.ctx.fillStyle = isSelected ? '#FFD700' : '#333333';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        
+        // 添加文本阴影增强可读性
+        this.ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.shadowBlur = 2;
+        this.ctx.shadowOffsetX = 1;
+        this.ctx.shadowOffsetY = 1;
+        
+        // 绘制标签
+        this.ctx.fillText(binId, centerX, centerY);
+        
+        // 重置阴影
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+    },
+    
+    // 根据颜色获取所有BIN区域（用于悬停检测等）
+    getAllBinAreasForColor(color) {
+        const binList = LEDBinManager.getColorBinList(color);
+        return binList.map(binId => ({
+            binId: binId,
+            coordinates: LEDBinManager.getColorBinCoordinates(color, binId),
+            color: color
+        }));
+    },
+    
+    // 检测鼠标点击是否在某个BIN区域内
+    getBinAtPosition(screenX, screenY) {
+        const config = ColorCalculatorConfig.canvas;
+        const cieCoords = this.screenToCieCoordinates(screenX, screenY, config.width, config.height);
+        
+        const colors = ['red', 'green', 'blue'];
+        
+        for (const color of colors) {
+            const binList = LEDBinManager.getColorBinList(color);
+            for (const binId of binList) {
+                if (LEDBinManager.isPointInBin(color, binId, cieCoords.x, cieCoords.y)) {
+                    return { color, binId };
+                }
+            }
+        }
+        
+        return null;
+    },
+    
+    // 高亮显示特定的BIN区域
+    highlightBin(color, binId) {
+        // 重新绘制图表
+        if (typeof ColorCalculatorApp !== 'undefined' && ColorCalculatorApp.updateDisplay) {
+            ColorCalculatorApp.updateDisplay();
+        }
+        
+        // 额外绘制高亮效果
+        this.drawColorBin(color, binId, true);
+    },
+    
+    // 清除BIN高亮
+    clearBinHighlight() {
+        // 重新绘制图表以清除高亮
+        if (typeof ColorCalculatorApp !== 'undefined' && ColorCalculatorApp.updateDisplay) {
+            ColorCalculatorApp.updateDisplay();
+        }
     }
 };

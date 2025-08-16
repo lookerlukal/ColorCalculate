@@ -134,8 +134,14 @@ const ColorTable = {
         if (e.target.classList.contains('visibility-btn')) {
             // 处理可见性切换
             this.toggleColorVisibility(colorId);
-        } else if (e.target.classList.contains('highlight-btn') || row.classList.contains('color-row')) {
+        } else if (e.target.classList.contains('highlight-btn')) {
             // 处理高亮切换
+            this.toggleColorHighlight(colorId);
+        } else if (e.target.classList.contains('target-btn')) {
+            // 处理设为目标色
+            this.setAsTargetColor(colorId);
+        } else if (row.classList.contains('color-row')) {
+            // 处理行点击高亮切换
             this.toggleColorHighlight(colorId);
         }
     },
@@ -156,6 +162,43 @@ const ColorTable = {
             const newHighlightState = !color.highlighted;
             ExcelLoader.setColorHighlight(colorId, newHighlightState);
             this.renderCurrentPage();
+        }
+    },
+    
+    // 设为目标色（添加到模式3的多选列表）
+    setAsTargetColor(colorId) {
+        const color = ExcelLoader.getColorById(colorId);
+        if (!color) return;
+        
+        // 检查是否已经添加过
+        if (typeof ColorCalculatorApp !== 'undefined' && ColorCalculatorApp.state.selectedTargets) {
+            const exists = ColorCalculatorApp.state.selectedTargets.some(target => 
+                target.type === 'excel' && target.originalId == colorId
+            );
+            
+            if (exists) {
+                NotificationSystem.warning(`"${color.name}"已在目标色列表中`);
+                return;
+            }
+            
+            // 添加到模式3的目标色列表
+            const target = {
+                id: `excel_${colorId}_${Date.now()}`,
+                name: color.name,
+                x: color.x,
+                y: color.y,
+                lv: 30, // 默认光通量
+                type: 'excel',
+                originalId: colorId
+            };
+            
+            ColorCalculatorApp.state.selectedTargets.push(target);
+            ColorCalculatorApp.updateTargetList();
+            
+            NotificationSystem.success(`已将"${color.name}"添加到目标色列表`);
+        } else {
+            console.error('ColorCalculatorApp不可用');
+            NotificationSystem.error('添加目标色失败');
         }
     },
     
@@ -259,10 +302,10 @@ const ColorTable = {
         row.innerHTML = `
             <td class="id-cell">${color.id}</td>
             <td class="name-cell">${color.name}</td>
-            <td class="coord-cell">${color.x.toFixed(4)}</td>
-            <td class="coord-cell">${color.y.toFixed(4)}</td>
+            <td class="coord-cell">${PrecisionFormatter.formatValue(color.x, 'coordinate')}</td>
+            <td class="coord-cell">${PrecisionFormatter.formatValue(color.y, 'coordinate')}</td>
             <td class="color-preview-cell">
-                <div class="color-swatch" style="background-color: ${colorPreview};" title="CIE坐标: (${color.x.toFixed(4)}, ${color.y.toFixed(4)})"></div>
+                <div class="color-swatch" style="background-color: ${colorPreview};" title="CIE坐标: (${PrecisionFormatter.formatValue(color.x, 'coordinate')}, ${PrecisionFormatter.formatValue(color.y, 'coordinate')})"></div>
             </td>
             <td class="action-cell">
                 <button class="action-btn visibility-btn ${color.visible ? 'visible' : 'hidden'}" 
@@ -272,6 +315,10 @@ const ColorTable = {
                 <button class="action-btn highlight-btn ${color.highlighted ? 'active' : ''}" 
                         title="${color.highlighted ? '取消高亮' : '高亮显示'}">
                     ${color.highlighted ? '⭐' : '☆'}
+                </button>
+                <button class="action-btn target-btn" 
+                        title="设为目标色">
+                    🎯
                 </button>
             </td>
         `;

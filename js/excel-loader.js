@@ -83,6 +83,9 @@ const ExcelLoader = {
             this.colorData = this.processRawData(rawData);
             this.isDataLoaded = true;
             
+            // 更新Excel目标色选择器
+            this.updateTargetSelector();
+            
             // 通知应用更新
             if (typeof ColorCalculatorApp !== 'undefined') {
                 ColorCalculatorApp.onExcelDataLoaded(this.colorData);
@@ -236,5 +239,27 @@ const ExcelLoader = {
             min: Math.min(...values),
             max: Math.max(...values)
         };
+    },
+    
+    // 更新Excel目标色选择器
+    updateTargetSelector() {
+        const selector = document.getElementById('excel-target-selector');
+        if (!selector) return;
+        
+        // 清空现有选项
+        selector.innerHTML = '<option value="">选择目标色...</option>';
+        
+        if (!this.isDataLoaded || this.colorData.length === 0) {
+            selector.innerHTML = '<option value="">请先导入Excel数据...</option>';
+            return;
+        }
+        
+        // 添加颜色选项
+        this.colorData.forEach(color => {
+            const option = document.createElement('option');
+            option.value = color.id;
+            option.textContent = `${color.name} (${PrecisionFormatter.formatValue(color.x, 'coordinate')}, ${PrecisionFormatter.formatValue(color.y, 'coordinate')})`;
+            selector.appendChild(option);
+        });
     }
 };

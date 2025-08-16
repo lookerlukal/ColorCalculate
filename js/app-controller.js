@@ -34,6 +34,12 @@ const ColorCalculatorApp = {
             ErrorHandler.handle(error, 'App initialization');
         }
     },
+
+    // 根据配置格式化数值显示
+    formatValue(value, type = 'luminance') {
+        const precision = ColorCalculatorConfig.precision.display[type];
+        return Number(value).toFixed(precision);
+    },
     
     // 初始化应用状态
     initializeState() {
@@ -52,8 +58,7 @@ const ColorCalculatorApp = {
         this.elements.tabs = {
             tab1: document.getElementById('tab1'),
             tab2: document.getElementById('tab2'),
-            tab3: document.getElementById('tab3'),
-            tab4: document.getElementById('tab4')
+            tab3: document.getElementById('tab3')
         };
         
         // 模式容器
@@ -80,20 +85,36 @@ const ColorCalculatorApp = {
                 x: document.getElementById(`${color}-x`),
                 y: document.getElementById(`${color}-y`),
                 lv: document.getElementById(`${color}-lv`),
-                maxLv: document.getElementById(`${color}-max-lv`), // 模式3的最大光通量
-                presets: document.getElementById(`${color}-presets`),
-                saveBtn: document.getElementById(`save-${color}-preset`)
+                maxLv: document.getElementById(`${color}-max-lv`), // 模式4的最大光通量
+                // LED分BIN选择器元素
+                ledEnable: document.getElementById(`${color}-led-enable`),
+                ledLuminanceBin: document.getElementById(`${color}-luminance-bin`),
+                ledColorBin: document.getElementById(`${color}-color-bin`),
+                ledInfo: document.getElementById(`${color}-led-info`)
             };
         });
         
-        // 目标色输入（模式2和3共享）
-        this.elements.inputs.target = {
-            x: document.getElementById('target-x'),
-            y: document.getElementById('target-y'),
-            lv: document.getElementById('target-lv')
+        // 模式3多选目标色相关元素
+        this.elements.inputs.mode3 = {
+            // 手动输入
+            manualX: document.getElementById('manual-target-x'),
+            manualY: document.getElementById('manual-target-y'),
+            manualLv: document.getElementById('manual-target-lv'),
+            manualMaxHint: document.getElementById('manual-max-lv-hint'),
+            addManualBtn: document.getElementById('add-manual-target'),
+            
+            // Excel选择
+            excelSelector: document.getElementById('excel-target-selector'),
+            excelLv: document.getElementById('excel-target-lv'),
+            excelMaxHint: document.getElementById('excel-max-lv-hint'),
+            addExcelBtn: document.getElementById('add-excel-target'),
+            
+            // 目标列表
+            targetList: document.getElementById('target-list'),
+            clearAllBtn: document.getElementById('clear-all-targets')
         };
         
-        // Excel导入相关元素（模式4）
+        // Excel导入相关元素（模式2）
         this.elements.inputs.excel = {
             fileInput: document.getElementById('excel-file-input'),
             selectBtn: document.getElementById('select-excel-btn'),
@@ -101,6 +122,9 @@ const ColorCalculatorApp = {
             dataStats: document.getElementById('excel-data-stats'),
             tableContainer: document.getElementById('color-table-container')
         };
+        
+        // 应用状态 - 添加选中的目标色列表
+        this.state.selectedTargets = [];
     },
     
     cacheResultElements() {
@@ -129,10 +153,12 @@ const ColorCalculatorApp = {
         // 初始化图表渲染器
         ChartRenderer.init(this.elements.canvas);
         
-        // 初始化预设管理器
-        if (typeof PresetManager !== 'undefined') {
-            PresetManager.init();
+        // 初始化LED分BIN管理器
+        if (typeof LEDBinManager !== 'undefined') {
+            LEDBinManager.init();
+            this.initializeLEDSelectors(); // 初始化LED选择器
         }
+        
         
         // 初始化Excel加载器
         if (typeof ExcelLoader !== 'undefined') {
@@ -149,9 +175,11 @@ const ColorCalculatorApp = {
     bindEvents() {
         // 标签页切换
         Object.entries(this.elements.tabs).forEach(([tabId, tabElement]) => {
-            tabElement.addEventListener('click', (e) => {
-                this.switchMode(tabId.replace('tab', 'mode'));
-            });
+            if (tabElement) {  // 添加null检查
+                tabElement.addEventListener('click', (e) => {
+                    this.switchMode(tabId.replace('tab', 'mode'));
+                });
+            }
         });
         
         // Canvas 交互事件
@@ -159,6 +187,9 @@ const ColorCalculatorApp = {
         
         // 输入框事件
         this.bindInputEvents();
+        
+        // LED选择器事件
+        this.bindLEDEvents();
         
         // 键盘事件
         this.bindKeyboardEvents();
@@ -184,6 +215,9 @@ const ColorCalculatorApp = {
         
         // Excel导入相关事件
         this.bindExcelEvents();
+        
+        // 模式3多选目标色事件
+        this.bindMode3Events();
     },
     
     // 绑定 Canvas 交互事件
@@ -300,6 +334,8 @@ const ColorCalculatorApp = {
                 this.updateDisplay();
             });
         }
+        
+        // Excel目标色选择器事件已移到bindMode3Events中处理
     },
     
     // 切换计算模式
@@ -538,17 +574,20 @@ const ColorCalculatorApp = {
             if (this.state.activeMode === 'mode1') {
                 const mixResult = ColorCalculator.calculateMixedColor(this.state.colorPoints);
                 this.state.colorPoints.mix = mixResult;
-                Logger.info(`模式1计算完成: 混合色(${mixResult.x.toFixed(4)}, ${mixResult.y.toFixed(4)}, ${mixResult.lv.toFixed(1)})`, 'Calculator');
+                Logger.info(`模式1计算完成: 混合色(${this.formatValue(mixResult.x, 'coordinate')}, ${this.formatValue(mixResult.y, 'coordinate')}, ${this.formatValue(mixResult.lv)})`, 'Calculator');
             } else if (this.state.activeMode === 'mode2') {
-                const required = ColorCalculator.calculateRequiredLuminance(this.state.colorPoints);
-                this.updateMode2Results(required);
-                Logger.info(`模式2计算完成: R=${required.red.toFixed(1)}, G=${required.green.toFixed(1)}, B=${required.blue.toFixed(1)}`, 'Calculator');
+                // 模式2: 目标色导入 - 主要用于Excel数据导入和目标色设置，无需特殊计算
+                Logger.info('模式2: 目标色导入模式', 'Calculator');
             } else if (this.state.activeMode === 'mode3') {
-                // 获取界面上的最大光通量值
+                // 模式3: 计算光通量需求（多目标色）
+                this.calculateMode3MultiTargets();
+                this.updateMode3MaxHints(); // 更新最大光通量提示
+            } else if (this.state.activeMode === 'mode4') {
+                // 模式4: 计算最大光通量
                 const maxLvValues = this.getMaxLvValues();
                 const maxResult = ColorCalculator.calculateMaxLuminance(this.state.colorPoints, maxLvValues);
-                this.updateMode3Results(maxResult);
-                Logger.info(`模式3计算完成: 最大光通量=${maxResult.maxLuminance.toFixed(1)}`, 'Calculator');
+                this.updateMode4Results(maxResult);
+                Logger.info(`模式4计算完成: 最大光通量=${this.formatValue(maxResult.maxLuminance)}`, 'Calculator');
             }
         } catch (error) {
             Logger.error(`计算失败: ${error.message}`, 'Calculator');
@@ -556,32 +595,113 @@ const ColorCalculatorApp = {
         }
     },
     
-    // 更新模式2结果显示
-    updateMode2Results(results) {
-        if (this.elements.results.requiredRed) {
-            this.elements.results.requiredRed.textContent = results.red.toFixed(1);
+    // 计算模式3的多目标色光通量需求
+    calculateMode3MultiTargets() {
+        const resultsContainer = document.getElementById('mode3-results');
+        if (!resultsContainer) return;
+        
+        if (this.state.selectedTargets.length === 0) {
+            resultsContainer.innerHTML = '<p class="empty-hint">请先添加目标色并点击计算</p>';
+            return;
         }
-        if (this.elements.results.requiredGreen) {
-            this.elements.results.requiredGreen.textContent = results.green.toFixed(1);
-        }
-        if (this.elements.results.requiredBlue) {
-            this.elements.results.requiredBlue.textContent = results.blue.toFixed(1);
+        
+        let html = '';
+        let hasError = false;
+        
+        this.state.selectedTargets.forEach((target, index) => {
+            try {
+                // 验证RGB基色数据
+                const rgbValid = ['red', 'green', 'blue'].every(color => {
+                    const point = this.state.colorPoints[color];
+                    return ColorCalculator.validateColorPoint(point);
+                });
+                
+                if (!rgbValid) {
+                    throw new Error('RGB基色数据无效，请检查模式1中的RGB设置');
+                }
+                
+                // 验证目标色数据
+                if (!target || isNaN(target.x) || isNaN(target.y) || isNaN(target.lv)) {
+                    throw new Error('目标色数据无效');
+                }
+                
+                // 构造临时colorPoints用于计算
+                const tempColorPoints = {
+                    red: this.state.colorPoints.red,
+                    green: this.state.colorPoints.green,
+                    blue: this.state.colorPoints.blue,
+                    target: { x: target.x, y: target.y, lv: target.lv }
+                };
+                
+                const required = ColorCalculator.calculateRequiredLuminance(tempColorPoints);
+                
+                html += `
+                    <div class="target-result">
+                        <h4>${target.name}</h4>
+                        <div class="result-grid">
+                            <div class="result-item">
+                                <span>红色所需光通量:</span>
+                                <span>${this.formatValue(required.red)}lm</span>
+                            </div>
+                            <div class="result-item">
+                                <span>绿色所需光通量:</span>
+                                <span>${this.formatValue(required.green)}lm</span>
+                            </div>
+                            <div class="result-item">
+                                <span>蓝色所需光通量:</span>
+                                <span>${this.formatValue(required.blue)}lm</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                Logger.info(`目标色${index + 1}计算完成: R=${this.formatValue(required.red)}, G=${this.formatValue(required.green)}, B=${this.formatValue(required.blue)}`, 'Mode3Calculator');
+            } catch (error) {
+                hasError = true;
+                html += `
+                    <div class="target-result error">
+                        <h4>${target.name}</h4>
+                        <p class="error-message">计算失败: ${error.message}</p>
+                    </div>
+                `;
+                Logger.error(`目标色${index + 1}计算失败: ${error.message}`, 'Mode3Calculator');
+            }
+        });
+        
+        resultsContainer.innerHTML = html;
+        
+        if (hasError) {
+            NotificationSystem.warning('部分目标色计算失败，请检查坐标是否在RGB三角形内');
         }
     },
     
-    // 更新模式3结果显示
+    // 更新模式3结果显示（兼容旧版本）
     updateMode3Results(results) {
+        // 这个方法保留用于兼容性，新的多目标色计算使用calculateMode3MultiTargets
+        if (this.elements.results.requiredRed) {
+            this.elements.results.requiredRed.textContent = this.formatValue(results.red);
+        }
+        if (this.elements.results.requiredGreen) {
+            this.elements.results.requiredGreen.textContent = this.formatValue(results.green);
+        }
+        if (this.elements.results.requiredBlue) {
+            this.elements.results.requiredBlue.textContent = this.formatValue(results.blue);
+        }
+    },
+    
+    // 更新模式4结果显示（计算最大光通量）
+    updateMode4Results(results) {
         if (this.elements.results.maxLv) {
-            this.elements.results.maxLv.textContent = results.maxLuminance.toFixed(1);
+            this.elements.results.maxLv.textContent = this.formatValue(results.maxLuminance);
         }
         if (this.elements.results.redUsed) {
-            this.elements.results.redUsed.textContent = results.ratio.red.toFixed(1);
+            this.elements.results.redUsed.textContent = this.formatValue(results.ratio.red);
         }
         if (this.elements.results.greenUsed) {
-            this.elements.results.greenUsed.textContent = results.ratio.green.toFixed(1);
+            this.elements.results.greenUsed.textContent = this.formatValue(results.ratio.green);
         }
         if (this.elements.results.blueUsed) {
-            this.elements.results.blueUsed.textContent = results.ratio.blue.toFixed(1);
+            this.elements.results.blueUsed.textContent = this.formatValue(results.ratio.blue);
         }
     },
     
@@ -594,18 +714,18 @@ const ColorCalculatorApp = {
             const inputs = this.elements.inputs[color];
             
             if (point && inputs) {
-                if (inputs.x) inputs.x.value = point.x.toFixed(4);
-                if (inputs.y) inputs.y.value = point.y.toFixed(4);
-                if (inputs.lv) inputs.lv.value = point.lv.toFixed(1);
+                if (inputs.x) inputs.x.value = this.formatValue(point.x, 'coordinate');
+                if (inputs.y) inputs.y.value = this.formatValue(point.y, 'coordinate');
+                if (inputs.lv) inputs.lv.value = this.formatValue(point.lv);
             }
         });
         
         // 更新模式1的混合结果显示
         if (this.state.activeMode === 'mode1') {
             const mix = this.state.colorPoints.mix;
-            if (this.elements.results.mixX) this.elements.results.mixX.textContent = mix.x.toFixed(4);
-            if (this.elements.results.mixY) this.elements.results.mixY.textContent = mix.y.toFixed(4);
-            if (this.elements.results.mixLv) this.elements.results.mixLv.textContent = mix.lv.toFixed(1);
+            if (this.elements.results.mixX) this.elements.results.mixX.textContent = this.formatValue(mix.x, 'coordinate');
+            if (this.elements.results.mixY) this.elements.results.mixY.textContent = this.formatValue(mix.y, 'coordinate');
+            if (this.elements.results.mixLv) this.elements.results.mixLv.textContent = this.formatValue(mix.lv);
         }
     },
     
@@ -657,6 +777,43 @@ const ColorCalculatorApp = {
         }
     },
     
+    // 绑定模式3多选目标色事件
+    bindMode3Events() {
+        const mode3Elements = this.elements.inputs.mode3;
+        
+        // 手动添加目标色按钮
+        if (mode3Elements.addManualBtn) {
+            mode3Elements.addManualBtn.addEventListener('click', () => {
+                this.addManualTarget();
+            });
+        }
+        
+        // Excel添加目标色按钮
+        if (mode3Elements.addExcelBtn) {
+            mode3Elements.addExcelBtn.addEventListener('click', () => {
+                this.addExcelTarget();
+            });
+        }
+        
+        // 清空所有目标按钮
+        if (mode3Elements.clearAllBtn) {
+            mode3Elements.clearAllBtn.addEventListener('click', () => {
+                this.clearAllTargets();
+            });
+        }
+        
+        // 实时更新最大光通量提示
+        if (mode3Elements.manualX) {
+            mode3Elements.manualX.addEventListener('input', () => this.updateMode3MaxHints());
+        }
+        if (mode3Elements.manualY) {
+            mode3Elements.manualY.addEventListener('input', () => this.updateMode3MaxHints());
+        }
+        if (mode3Elements.excelSelector) {
+            mode3Elements.excelSelector.addEventListener('change', () => this.updateMode3MaxHints());
+        }
+    },
+    
     // Excel数据加载完成回调
     onExcelDataLoaded(colorData) {
         try {
@@ -678,6 +835,73 @@ const ColorCalculatorApp = {
             NotificationSystem.success(`成功加载 ${colorData.length} 个颜色数据`);
         } catch (error) {
             ErrorHandler.handle(error, 'Excel data loaded callback');
+        }
+    },
+    
+    // 从Excel数据设置目标色
+    setTargetColorFromExcel(color) {
+        try {
+            // 更新目标色坐标
+            this.state.colorPoints.target.x = color.x;
+            this.state.colorPoints.target.y = color.y;
+            
+            // 更新输入框显示
+            if (this.elements.inputs.target.x) {
+                this.elements.inputs.target.x.value = this.formatValue(color.x, 'coordinate');
+            }
+            if (this.elements.inputs.target.y) {
+                this.elements.inputs.target.y.value = this.formatValue(color.y, 'coordinate');
+            }
+            
+            // Excel目标色选择器更新已移到模式3中处理
+            
+            // 更新最大光通量提示
+            this.updateMaxLvHint();
+            
+            // 重新计算和显示
+            this.performCalculation();
+            this.updateDisplay();
+            
+            Logger.info(`设置目标色: ${color.name} (${color.x}, ${color.y})`, 'ExcelTarget');
+        } catch (error) {
+            ErrorHandler.handle(error, 'setTargetColorFromExcel');
+        }
+    },
+    
+    // 更新最大光通量提示
+    updateMaxLvHint() {
+        if (!this.elements.inputs.maxLvHint) return;
+        
+        try {
+            // 使用当前的RGB基色坐标和目标色计算最大光通量
+            const maxLvValues = {
+                red: 100,   // 默认最大值，实际应从模式4获取
+                green: 100,
+                blue: 100
+            };
+            
+            // 如果模式4有设置，使用模式4的值
+            const redMaxInput = document.getElementById('red-max-lv');
+            const greenMaxInput = document.getElementById('green-max-lv');
+            const blueMaxInput = document.getElementById('blue-max-lv');
+            
+            if (redMaxInput && redMaxInput.value) maxLvValues.red = parseFloat(redMaxInput.value);
+            if (greenMaxInput && greenMaxInput.value) maxLvValues.green = parseFloat(greenMaxInput.value);
+            if (blueMaxInput && blueMaxInput.value) maxLvValues.blue = parseFloat(blueMaxInput.value);
+            
+            const result = ColorCalculator.calculateMaxLuminance(this.state.colorPoints, maxLvValues);
+            
+            if (result.maxLuminance > 0) {
+                this.elements.inputs.maxLvHint.textContent = `最大可达: ${this.formatValue(result.maxLuminance)} lm`;
+                this.elements.inputs.maxLvHint.style.color = '#28a745';
+            } else {
+                this.elements.inputs.maxLvHint.textContent = '目标色不在RGB三角形内';
+                this.elements.inputs.maxLvHint.style.color = '#dc3545';
+            }
+        } catch (error) {
+            this.elements.inputs.maxLvHint.textContent = '计算失败';
+            this.elements.inputs.maxLvHint.style.color = '#dc3545';
+            console.warn('最大光通量计算失败:', error);
         }
     },
     
@@ -714,8 +938,8 @@ const ColorCalculatorApp = {
             <span>总计: ${stats.total} 个颜色</span>
             <span>可见: ${stats.visible} 个</span>
             <span>高亮: ${stats.highlighted} 个</span>
-            <span>X范围: ${stats.xRange.min.toFixed(4)} - ${stats.xRange.max.toFixed(4)}</span>
-            <span>Y范围: ${stats.yRange.min.toFixed(4)} - ${stats.yRange.max.toFixed(4)}</span>
+            <span>X范围: ${this.formatValue(stats.xRange.min, 'coordinate')} - ${this.formatValue(stats.xRange.max, 'coordinate')}</span>
+            <span>Y范围: ${this.formatValue(stats.yRange.min, 'coordinate')} - ${this.formatValue(stats.yRange.max, 'coordinate')}</span>
         `;
     },
     
@@ -749,6 +973,358 @@ const ColorCalculatorApp = {
         }
         
         return false;
+    },
+    
+    // =================== LED分BIN功能 ===================
+    
+    // 初始化LED选择器
+    initializeLEDSelectors() {
+        const colors = ['red', 'green', 'blue'];
+        
+        colors.forEach(color => {
+            this.populateLEDSelectors(color);
+        });
+    },
+    
+    // 填充LED选择器选项
+    populateLEDSelectors(color) {
+        const elements = this.elements.inputs[color];
+        if (!elements || !elements.ledLuminanceBin || !elements.ledColorBin) return;
+        
+        // 填充亮度BIN选项
+        const luminanceBins = LEDBinManager.getLuminanceBins(color);
+        elements.ledLuminanceBin.innerHTML = '<option value="">选择亮度BIN...</option>';
+        luminanceBins.forEach(bin => {
+            const option = document.createElement('option');
+            option.value = bin.id;
+            option.textContent = `${bin.id} (${this.formatValue(bin.min)}-${this.formatValue(bin.max)} lm)`;
+            option.title = bin.description || '';
+            elements.ledLuminanceBin.appendChild(option);
+        });
+        
+        // 填充色度BIN选项
+        const colorBins = LEDBinManager.getColorBinList(color);
+        elements.ledColorBin.innerHTML = '<option value="">选择色度BIN...</option>';
+        colorBins.forEach(binId => {
+            const wavelengthInfo = LEDBinManager.getWavelengthBin(color, binId);
+            const option = document.createElement('option');
+            option.value = binId;
+            option.textContent = binId;
+            if (wavelengthInfo) {
+                option.textContent += ` (${wavelengthInfo.min}-${wavelengthInfo.max}nm)`;
+            }
+            elements.ledColorBin.appendChild(option);
+        });
+    },
+    
+    // 绑定LED事件
+    bindLEDEvents() {
+        const colors = ['red', 'green', 'blue'];
+        
+        colors.forEach(color => {
+            const elements = this.elements.inputs[color];
+            if (!elements) return;
+            
+            // LED启用复选框事件
+            if (elements.ledEnable) {
+                elements.ledEnable.addEventListener('change', (e) => {
+                    this.onLEDEnableChange(color, e.target.checked);
+                });
+            }
+            
+            // 亮度BIN选择事件
+            if (elements.ledLuminanceBin) {
+                elements.ledLuminanceBin.addEventListener('change', (e) => {
+                    this.onLEDBinSelectionChange(color);
+                });
+            }
+            
+            // 色度BIN选择事件
+            if (elements.ledColorBin) {
+                elements.ledColorBin.addEventListener('change', (e) => {
+                    this.onLEDBinSelectionChange(color);
+                });
+            }
+        });
+    },
+    
+    // LED启用状态改变处理
+    onLEDEnableChange(color, enabled) {
+        const elements = this.elements.inputs[color];
+        if (!elements) return;
+        
+        const selectionGroup = elements.ledColorBin?.closest('.led-selection-group');
+        if (selectionGroup) {
+            selectionGroup.style.display = enabled ? 'block' : 'none';
+        }
+        
+        if (!enabled) {
+            // 禁用时清除选择
+            LEDBinManager.clearSelection(color);
+            if (elements.ledLuminanceBin) elements.ledLuminanceBin.value = '';
+            if (elements.ledColorBin) elements.ledColorBin.value = '';
+            this.hideLEDInfo(color);
+            this.updateDisplay();
+        }
+    },
+    
+    // LED BIN选择改变处理
+    onLEDBinSelectionChange(color) {
+        const elements = this.elements.inputs[color];
+        if (!elements) return;
+        
+        const luminanceBin = elements.ledLuminanceBin?.value;
+        const colorBin = elements.ledColorBin?.value;
+        
+        if (luminanceBin && colorBin) {
+            // 两个BIN都选择了，更新LEDBinManager和输入框
+            LEDBinManager.setSelection(color, luminanceBin, colorBin);
+            const params = LEDBinManager.getSelectedLEDParams(color);
+            
+            if (params) {
+                // 更新坐标和亮度输入框
+                if (elements.x) elements.x.value = this.formatValue(params.x, 'coordinate');
+                if (elements.y) elements.y.value = this.formatValue(params.y, 'coordinate');
+                if (elements.lv) elements.lv.value = this.formatValue(params.lv);
+                
+                // 更新状态
+                this.state.colorPoints[color] = {
+                    x: params.x,
+                    y: params.y,
+                    lv: params.lv
+                };
+                
+                // 显示LED信息
+                this.showLEDInfo(color, params);
+                
+                // 重新计算和显示
+                this.performCalculation();
+                this.updateDisplay();
+                
+                Logger.info(`LED BIN选择: ${color} - 亮度:${luminanceBin}, 色度:${colorBin}`, 'LEDSelection');
+            }
+        } else {
+            // 选择不完整，隐藏信息
+            this.hideLEDInfo(color);
+        }
+    },
+    
+    // 显示LED信息
+    showLEDInfo(color, params) {
+        const elements = this.elements.inputs[color];
+        if (!elements || !elements.ledInfo) return;
+        
+        const wavelengthInfo = LEDBinManager.getWavelengthBin(color, params.colorBin);
+        const luminanceBin = LEDBinManager.getLuminanceBins(color).find(b => b.id === params.luminanceBin);
+        
+        let infoText = `中心坐标: (${this.formatValue(params.x, 'coordinate')}, ${this.formatValue(params.y, 'coordinate')})`;
+        if (wavelengthInfo) {
+            infoText += ` | 波长: ${wavelengthInfo.min}-${wavelengthInfo.max}nm`;
+        }
+        if (luminanceBin) {
+            infoText += ` | 光通量: ${this.formatValue(params.lv)}lm`;
+        }
+        
+        const infoElement = elements.ledInfo.querySelector('.led-wavelength-info');
+        if (infoElement) {
+            infoElement.textContent = infoText;
+        }
+        
+        elements.ledInfo.style.display = 'block';
+    },
+    
+    // 隐藏LED信息
+    hideLEDInfo(color) {
+        const elements = this.elements.inputs[color];
+        if (elements && elements.ledInfo) {
+            elements.ledInfo.style.display = 'none';
+        }
+    },
+    
+    // === 多选目标色功能 ===
+    
+    // 添加手动输入的目标色
+    addManualTarget() {
+        const mode3Elements = this.elements.inputs.mode3;
+        
+        const x = parseFloat(mode3Elements.manualX.value);
+        const y = parseFloat(mode3Elements.manualY.value);
+        const lv = parseFloat(mode3Elements.manualLv.value);
+        
+        if (isNaN(x) || isNaN(y) || isNaN(lv)) {
+            NotificationSystem.error('请输入有效的坐标和光通量值');
+            return;
+        }
+        
+        if (x < 0 || x > 1 || y < 0 || y > 1) {
+            NotificationSystem.error('坐标值应在0-1范围内');
+            return;
+        }
+        
+        const target = {
+            id: `manual_${Date.now()}`,
+            name: `手动输入 (${this.formatValue(x, 'coordinate')}, ${this.formatValue(y, 'coordinate')})`,
+            x: x,
+            y: y,
+            lv: lv,
+            type: 'manual'
+        };
+        
+        this.state.selectedTargets.push(target);
+        this.updateTargetList();
+        this.clearManualInputs();
+        
+        NotificationSystem.success('已添加目标色');
+    },
+    
+    // 添加Excel选择的目标色
+    addExcelTarget() {
+        const mode3Elements = this.elements.inputs.mode3;
+        
+        const selectedId = mode3Elements.excelSelector.value;
+        const lv = parseFloat(mode3Elements.excelLv.value);
+        
+        if (!selectedId) {
+            NotificationSystem.error('请选择一个颜色');
+            return;
+        }
+        
+        if (isNaN(lv)) {
+            NotificationSystem.error('请输入有效的光通量值');
+            return;
+        }
+        
+        const color = ExcelLoader.getColorById(selectedId);
+        if (!color) {
+            NotificationSystem.error('选择的颜色不存在');
+            return;
+        }
+        
+        const target = {
+            id: `excel_${selectedId}_${Date.now()}`,
+            name: color.name,
+            x: color.x,
+            y: color.y,
+            lv: lv,
+            type: 'excel',
+            originalId: selectedId
+        };
+        
+        this.state.selectedTargets.push(target);
+        this.updateTargetList();
+        
+        // 重置Excel输入
+        mode3Elements.excelSelector.value = '';
+        mode3Elements.excelLv.value = '1';
+        
+        NotificationSystem.success('已添加目标色');
+    },
+    
+    // 清空所有目标色
+    clearAllTargets() {
+        this.state.selectedTargets = [];
+        this.updateTargetList();
+        NotificationSystem.info('已清空所有目标色');
+    },
+    
+    // 删除指定目标色
+    removeTarget(targetId) {
+        this.state.selectedTargets = this.state.selectedTargets.filter(t => t.id !== targetId);
+        this.updateTargetList();
+    },
+    
+    // 更新目标色列表显示
+    updateTargetList() {
+        const targetList = this.elements.inputs.mode3.targetList;
+        if (!targetList) return;
+        
+        if (this.state.selectedTargets.length === 0) {
+            targetList.innerHTML = '<p class="empty-hint">尚未添加任何目标色</p>';
+            return;
+        }
+        
+        let html = '';
+        this.state.selectedTargets.forEach(target => {
+            const maxLv = this.calculateMaxLuminanceForTarget(target.x, target.y);
+            html += `
+                <div class="target-item" data-target-id="${target.id}">
+                    <div class="target-info">
+                        <strong>${target.name}</strong><br>
+                        <small>坐标: (${this.formatValue(target.x, 'coordinate')}, ${this.formatValue(target.y, 'coordinate')})</small><br>
+                        <small>目标光通量: ${this.formatValue(target.lv)}lm (最大可达: ${this.formatValue(maxLv)}lm)</small>
+                    </div>
+                    <button class="remove-target-btn" onclick="ColorCalculatorApp.removeTarget('${target.id}')">
+                        ❌
+                    </button>
+                </div>
+            `;
+        });
+        
+        targetList.innerHTML = html;
+    },
+    
+    // 清空手动输入框
+    clearManualInputs() {
+        const mode3Elements = this.elements.inputs.mode3;
+        if (mode3Elements.manualX) mode3Elements.manualX.value = '0.3333';
+        if (mode3Elements.manualY) mode3Elements.manualY.value = '0.3333';
+        if (mode3Elements.manualLv) mode3Elements.manualLv.value = '1';
+    },
+    
+    // 更新模式3的最大光通量提示
+    updateMode3MaxHints() {
+        const mode3Elements = this.elements.inputs.mode3;
+        
+        // 更新手动输入的最大光通量提示
+        if (mode3Elements.manualX && mode3Elements.manualY && mode3Elements.manualMaxHint) {
+            const x = parseFloat(mode3Elements.manualX.value);
+            const y = parseFloat(mode3Elements.manualY.value);
+            
+            if (!isNaN(x) && !isNaN(y)) {
+                const maxLv = this.calculateMaxLuminanceForTarget(x, y);
+                mode3Elements.manualMaxHint.textContent = `最大可达: ${this.formatValue(maxLv)}lm`;
+            }
+        }
+        
+        // 更新Excel选择的最大光通量提示
+        if (mode3Elements.excelSelector && mode3Elements.excelMaxHint) {
+            const selectedId = mode3Elements.excelSelector.value;
+            if (selectedId) {
+                const color = ExcelLoader.getColorById(selectedId);
+                if (color) {
+                    const maxLv = this.calculateMaxLuminanceForTarget(color.x, color.y);
+                    mode3Elements.excelMaxHint.textContent = `最大可达: ${this.formatValue(maxLv)}lm`;
+                }
+            }
+        }
+    },
+    
+    // 计算指定目标色的最大光通量（使用模式1的RGB数据）
+    calculateMaxLuminanceForTarget(targetX, targetY) {
+        try {
+            // 使用模式1中当前设置的RGB光通量值
+            const maxLvValues = {
+                red: this.state.colorPoints.red.lv,
+                green: this.state.colorPoints.green.lv,
+                blue: this.state.colorPoints.blue.lv
+            };
+            
+            // 构造完整的colorPoints对象
+            const colorPoints = {
+                red: this.state.colorPoints.red,
+                green: this.state.colorPoints.green,
+                blue: this.state.colorPoints.blue,
+                target: { x: targetX, y: targetY, lv: 0 } // lv值在最大光通量计算中不用到
+            };
+            
+            // 使用ColorCalculator计算最大光通量
+            const result = ColorCalculator.calculateMaxLuminance(colorPoints, maxLvValues);
+            
+            return result.maxLuminance || 0;
+        } catch (error) {
+            console.warn('计算最大光通量失败:', error);
+            return 0;
+        }
     }
 };
 

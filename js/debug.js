@@ -149,7 +149,7 @@ const debugTool = {
     updateCoordDisplay: function(cieCoord, mouseX, mouseY) {
         if (!this.coordDisplay) return;
         
-        this.coordDisplay.textContent = `x: ${cieCoord.x.toFixed(4)}, y: ${cieCoord.y.toFixed(4)}`;
+        this.coordDisplay.textContent = `x: ${PrecisionFormatter.formatValue(cieCoord.x, 'coordinate')}, y: ${PrecisionFormatter.formatValue(cieCoord.y, 'coordinate')}`;
         this.coordDisplay.style.left = (mouseX + 10) + 'px';
         this.coordDisplay.style.top = (mouseY + 10) + 'px';
         this.coordDisplay.style.display = 'block';
@@ -192,7 +192,7 @@ const debugTool = {
                 let color = 'white';
                 if (isClosest) color = wouldHit ? 'lime' : 'yellow';
                 
-                html += `<span style="color:${color}">${pointName}: ${distance.toFixed(4)}${wouldHit ? ' ✓' : ''}</span><br>`;
+                html += `<span style="color:${color}">${pointName}: ${PrecisionFormatter.formatValue(distance, 'coordinate')}${wouldHit ? ' ✓' : ''}</span><br>`;
             }
             
             const withinTolerance = minDistance < this.tolerance;

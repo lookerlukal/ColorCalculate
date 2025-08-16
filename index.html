@@ -28,10 +28,9 @@
             
             <div class="control-panel">
                 <div class="tabs">
-                    <button id="tab1" class="tab-btn active">模式1: 计算混合结果</button>
-                    <button id="tab2" class="tab-btn">模式2: 计算光通量需求</button>
-                    <button id="tab3" class="tab-btn">模式3: 计算最大光通量</button>
-                    <button id="tab4" class="tab-btn">模式4: Excel数据导入</button>
+                    <button id="tab1" class="tab-btn active">Step 1: 计算混合结果</button>
+                    <button id="tab2" class="tab-btn">Step 2: 目标色导入</button>
+                    <button id="tab3" class="tab-btn">Step 3: 计算光通量需求</button>
                 </div>
                 
                 <div id="mode1" class="tab-content active">
@@ -51,12 +50,34 @@
                                 <label>光通量 (Lv):</label>
                                 <input type="number" id="red-lv" step="0.1" min="0" value="10">
                             </div>
-                            <div class="preset-controls">
-                                <select id="red-presets" class="preset-select">
-                                    <option value="">选择预设...</option>
-                                </select>
-                                <button id="save-red-preset" class="preset-btn">保存当前值</button>
+                            
+                            <!-- LED分BIN选择器 -->
+                            <div class="led-bin-selector" id="red-led-selector">
+                                <div class="led-enable-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="red-led-enable">
+                                        <span>使用LED分BIN数据</span>
+                                    </label>
+                                </div>
+                                <div class="led-selection-group" style="display: none;">
+                                    <div class="led-bin-group">
+                                        <label>亮度BIN:</label>
+                                        <select id="red-luminance-bin" class="led-select">
+                                            <option value="">选择亮度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-bin-group">
+                                        <label>色度BIN:</label>
+                                        <select id="red-color-bin" class="led-select">
+                                            <option value="">选择色度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-info" id="red-led-info" style="display: none;">
+                                        <small class="led-wavelength-info"></small>
+                                    </div>
+                                </div>
                             </div>
+                            
                         </div>
                         
                         <div class="color-input green">
@@ -73,12 +94,34 @@
                                 <label>光通量 (Lv):</label>
                                 <input type="number" id="green-lv" step="0.1" min="0" value="10">
                             </div>
-                            <div class="preset-controls">
-                                <select id="green-presets" class="preset-select">
-                                    <option value="">选择预设...</option>
-                                </select>
-                                <button id="save-green-preset" class="preset-btn">保存当前值</button>
+                            
+                            <!-- LED分BIN选择器 -->
+                            <div class="led-bin-selector" id="green-led-selector">
+                                <div class="led-enable-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="green-led-enable">
+                                        <span>使用LED分BIN数据</span>
+                                    </label>
+                                </div>
+                                <div class="led-selection-group" style="display: none;">
+                                    <div class="led-bin-group">
+                                        <label>亮度BIN:</label>
+                                        <select id="green-luminance-bin" class="led-select">
+                                            <option value="">选择亮度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-bin-group">
+                                        <label>色度BIN:</label>
+                                        <select id="green-color-bin" class="led-select">
+                                            <option value="">选择色度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-info" id="green-led-info" style="display: none;">
+                                        <small class="led-wavelength-info"></small>
+                                    </div>
+                                </div>
                             </div>
+                            
                         </div>
                         
                         <div class="color-input blue">
@@ -95,12 +138,34 @@
                                 <label>光通量 (Lv):</label>
                                 <input type="number" id="blue-lv" step="0.1" min="0" value="10">
                             </div>
-                            <div class="preset-controls">
-                                <select id="blue-presets" class="preset-select">
-                                    <option value="">选择预设...</option>
-                                </select>
-                                <button id="save-blue-preset" class="preset-btn">保存当前值</button>
+                            
+                            <!-- LED分BIN选择器 -->
+                            <div class="led-bin-selector" id="blue-led-selector">
+                                <div class="led-enable-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="blue-led-enable">
+                                        <span>使用LED分BIN数据</span>
+                                    </label>
+                                </div>
+                                <div class="led-selection-group" style="display: none;">
+                                    <div class="led-bin-group">
+                                        <label>亮度BIN:</label>
+                                        <select id="blue-luminance-bin" class="led-select">
+                                            <option value="">选择亮度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-bin-group">
+                                        <label>色度BIN:</label>
+                                        <select id="blue-color-bin" class="led-select">
+                                            <option value="">选择色度BIN...</option>
+                                        </select>
+                                    </div>
+                                    <div class="led-info" id="blue-led-info" style="display: none;">
+                                        <small class="led-wavelength-info"></small>
+                                    </div>
+                                </div>
                             </div>
+                            
                         </div>
                     </div>
                     
@@ -124,51 +189,102 @@
                 </div>
                 
                 <div id="mode2" class="tab-content">
-                    <h2>目标色设置</h2>
-                    <div class="target-color">
-                        <div class="input-group">
-                            <label>目标色 x 坐标:</label>
-                            <input type="number" id="target-x" step="0.0001" min="0" max="1" value="0.3333">
+                    <h2>目标色导入</h2>
+                    <div class="excel-import-section">
+                        <div class="file-upload">
+                            <h3>导入Excel文件</h3>
+                            <div class="upload-controls">
+                                <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
+                                <button id="select-excel-btn" class="upload-btn">选择Excel文件</button>
+                                <button id="load-default-btn" class="upload-btn secondary">加载默认数据</button>
+                            </div>
+                            <div class="upload-info">
+                                <small>支持.xlsx和.xls格式，要求包含ID、X坐标、Y坐标三列数据</small>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label>目标色 y 坐标:</label>
-                            <input type="number" id="target-y" step="0.0001" min="0" max="1" value="0.3333">
-                        </div>
-                        <div class="input-group">
-                            <label>目标光通量 (Lv):</label>
-                            <input type="number" id="target-lv" step="0.1" min="0" value="30">
-                        </div>
-                        <div class="preset-controls">
-                            <select id="target-presets" class="preset-select">
-                                <option value="">选择预设...</option>
-                            </select>
-                            <button id="save-target-preset" class="preset-btn">保存当前值</button>
+                        
+                        <div class="data-display">
+                            <div class="data-stats" id="excel-data-stats">
+                                <span>未加载数据</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <p class="mode-note">注意：RGB三基色坐标使用模式1中的设置，该模式专注于计算达到目标色所需的光通量</p>
                     
-                    <button id="calculate-lv" class="calc-btn">计算所需光通量</button>
-                    
-                    <div class="result">
-                        <h3>计算结果</h3>
-                        <div class="result-item">
-                            <span>红色所需光通量:</span>
-                            <span id="red-lv-result">-</span>
-                        </div>
-                        <div class="result-item">
-                            <span>绿色所需光通量:</span>
-                            <span id="green-lv-result">-</span>
-                        </div>
-                        <div class="result-item">
-                            <span>蓝色所需光通量:</span>
-                            <span id="blue-lv-result">-</span>
+                    <div class="excel-table-section">
+                        <h3>颜色数据表</h3>
+                        <div id="color-table-container">
+                            <!-- 表格将由ColorTable组件动态生成 -->
                         </div>
                     </div>
                 </div>
                 
                 <div id="mode3" class="tab-content">
-                    <h2>最大光通量设置</h2>
+                    <h2>计算光通量需求</h2>
+                    
+                    <div class="target-color-selection">
+                        <h3>目标色选择</h3>
+                        
+                        <!-- 手动输入目标色 -->
+                        <div class="manual-target-input">
+                            <h4>手动输入目标色</h4>
+                            <div class="input-group">
+                                <label>目标色 x 坐标:</label>
+                                <input type="number" id="manual-target-x" step="0.0001" min="0" max="1" value="0.3333">
+                            </div>
+                            <div class="input-group">
+                                <label>目标色 y 坐标:</label>
+                                <input type="number" id="manual-target-y" step="0.0001" min="0" max="1" value="0.3333">
+                            </div>
+                            <div class="input-group">
+                                <label>目标光通量 (Lv):</label>
+                                <input type="number" id="manual-target-lv" step="0.1" min="0" value="1">
+                                <span class="max-lv-hint" id="manual-max-lv-hint">最大可达: 计算中...</span>
+                            </div>
+                            <button id="add-manual-target" class="upload-btn">添加到目标列表</button>
+                        </div>
+                        
+                        <!-- 从Excel数据选择 -->
+                        <div class="excel-target-selection">
+                            <h4>从Excel数据选择</h4>
+                            <div class="input-group">
+                                <label>颜色:</label>
+                                <select id="excel-target-selector" class="preset-select">
+                                    <option value="">请先导入Excel数据...</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>目标光通量 (Lv):</label>
+                                <input type="number" id="excel-target-lv" step="0.1" min="0" value="1">
+                                <span class="max-lv-hint" id="excel-max-lv-hint">最大可达: 计算中...</span>
+                            </div>
+                            <button id="add-excel-target" class="upload-btn">添加到目标列表</button>
+                        </div>
+                        
+                        <!-- 已选目标色列表 -->
+                        <div class="selected-targets">
+                            <h4>已选目标色</h4>
+                            <div id="target-list" class="target-list">
+                                <p class="empty-hint">尚未添加任何目标色</p>
+                            </div>
+                            <button id="clear-all-targets" class="clear-btn">清空所有目标</button>
+                        </div>
+                    </div>
+                    
+                    <p class="mode-note">注意：RGB三基色坐标使用模式1中的设置</p>
+                    
+                    <button id="calculate-lv" class="calc-btn">计算所需光通量</button>
+                    
+                    <div class="result">
+                        <h3>计算结果</h3>
+                        <div id="mode3-results">
+                            <p class="empty-hint">请先添加目标色并点击计算</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="mode4" class="tab-content" style="display: none;">
+                    <h2>计算最大光通量</h2>
                     <p class="mode-note">RGB三基色坐标使用模式1中的设置，此处仅设置各基色的最大光通量</p>
                     <div class="color-inputs">
                         <div class="color-input red">
@@ -196,7 +312,7 @@
                         </div>
                     </div>
                     
-                    <p class="mode-note">注意：目标色坐标使用上方模式2中的设置</p>
+                    <p class="mode-note">注意：目标色坐标使用模式2中的设置</p>
                     
                     <button id="calculate-max-lv" class="calc-btn">计算最大光通量</button>
                     
@@ -224,42 +340,13 @@
                         </div>
                     </div>
                 </div>
-                
-                <div id="mode4" class="tab-content">
-                    <h2>Excel数据导入</h2>
-                    <div class="excel-import-section">
-                        <div class="file-upload">
-                            <h3>导入Excel文件</h3>
-                            <div class="upload-controls">
-                                <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
-                                <button id="select-excel-btn" class="upload-btn">选择Excel文件</button>
-                                <button id="load-default-btn" class="upload-btn secondary">加载默认数据</button>
-                            </div>
-                            <div class="upload-info">
-                                <small>支持.xlsx和.xls格式，要求包含ID、X坐标、Y坐标三列数据</small>
-                            </div>
-                        </div>
-                        
-                        <div class="data-display">
-                            <div class="data-stats" id="excel-data-stats">
-                                <span>未加载数据</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="excel-table-section">
-                        <h3>颜色数据表</h3>
-                        <div id="color-table-container">
-                            <!-- 表格将由ColorTable组件动态生成 -->
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
     
     <!-- Core modules (load in order) -->
     <script src="js/config.js"></script>
+    <script src="js/led-bin-manager.js"></script>
     <script src="js/logger.js"></script>
     <script src="js/notification.js"></script>
     <script src="js/color-calculator.js"></script>
