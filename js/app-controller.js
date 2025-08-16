@@ -52,14 +52,16 @@ const ColorCalculatorApp = {
         this.elements.tabs = {
             tab1: document.getElementById('tab1'),
             tab2: document.getElementById('tab2'),
-            tab3: document.getElementById('tab3')
+            tab3: document.getElementById('tab3'),
+            tab4: document.getElementById('tab4')
         };
         
         // 模式容器
         this.elements.modes = {
             mode1: document.getElementById('mode1'),
             mode2: document.getElementById('mode2'),
-            mode3: document.getElementById('mode3')
+            mode3: document.getElementById('mode3'),
+            mode4: document.getElementById('mode4')
         };
         
         // 输入控件
@@ -89,6 +91,15 @@ const ColorCalculatorApp = {
             x: document.getElementById('target-x'),
             y: document.getElementById('target-y'),
             lv: document.getElementById('target-lv')
+        };
+        
+        // Excel导入相关元素（模式4）
+        this.elements.inputs.excel = {
+            fileInput: document.getElementById('excel-file-input'),
+            selectBtn: document.getElementById('select-excel-btn'),
+            loadDefaultBtn: document.getElementById('load-default-btn'),
+            dataStats: document.getElementById('excel-data-stats'),
+            tableContainer: document.getElementById('color-table-container')
         };
     },
     
@@ -121,6 +132,16 @@ const ColorCalculatorApp = {
         // 初始化预设管理器
         if (typeof PresetManager !== 'undefined') {
             PresetManager.init();
+        }
+        
+        // 初始化Excel加载器
+        if (typeof ExcelLoader !== 'undefined') {
+            ExcelLoader.init();
+        }
+        
+        // 初始化颜色表格组件
+        if (typeof ColorTable !== 'undefined') {
+            ColorTable.init('color-table-container');
         }
     },
     
@@ -160,6 +181,9 @@ const ColorCalculatorApp = {
             ChartRenderer.invalidateCache();
             this.updateDisplay();
         });
+        
+        // Excel导入相关事件
+        this.bindExcelEvents();
     },
     
     // 绑定 Canvas 交互事件
@@ -310,6 +334,11 @@ const ColorCalculatorApp = {
         const rect = this.elements.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+        
+        // 先检查是否点击了Excel数据点
+        if (this.handleExcelDataPointClick(e)) {
+            return;
+        }
         
         // 检查是否点击了某个颜色点
         const clickedPoint = this.getClickedPoint(x, y);
@@ -597,6 +626,129 @@ const ColorCalculatorApp = {
         if (this.state.debugMode && this.state.mouseX !== undefined && this.state.mouseY !== undefined) {
             ChartRenderer.drawDebugInfo(this.state.mouseX, this.state.mouseY);
         }
+    },
+    
+    // 绑定Excel相关事件
+    bindExcelEvents() {
+        const excelElements = this.elements.inputs.excel;
+        
+        // 文件选择按钮
+        if (excelElements.selectBtn) {
+            excelElements.selectBtn.addEventListener('click', () => {
+                excelElements.fileInput.click();
+            });
+        }
+        
+        // 文件输入变化
+        if (excelElements.fileInput) {
+            excelElements.fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    ExcelLoader.handleFileInput(file);
+                }
+            });
+        }
+        
+        // 加载默认数据按钮
+        if (excelElements.loadDefaultBtn) {
+            excelElements.loadDefaultBtn.addEventListener('click', () => {
+                ExcelLoader.loadDefaultData();
+            });
+        }
+    },
+    
+    // Excel数据加载完成回调
+    onExcelDataLoaded(colorData) {
+        try {
+            Logger.info(`Excel数据加载完成: ${colorData.length} 个颜色数据`, 'ExcelLoader');
+            
+            // 更新数据统计信息
+            this.updateExcelDataStats();
+            
+            // 更新表格显示
+            if (typeof ColorTable !== 'undefined') {
+                ColorTable.updateData();
+            }
+            
+            // 如果当前在模式4，重新绘制图表
+            if (this.state.activeMode === 'mode4') {
+                this.updateDisplay();
+            }
+            
+            NotificationSystem.success(`成功加载 ${colorData.length} 个颜色数据`);
+        } catch (error) {
+            ErrorHandler.handle(error, 'Excel data loaded callback');
+        }
+    },
+    
+    // Excel数据变化回调
+    onExcelDataChanged() {
+        try {
+            // 更新数据统计信息
+            this.updateExcelDataStats();
+            
+            // 重新绘制图表
+            this.updateDisplay();
+            
+            // 更新表格显示
+            if (typeof ColorTable !== 'undefined') {
+                ColorTable.renderCurrentPage();
+            }
+        } catch (error) {
+            ErrorHandler.handle(error, 'Excel data changed callback');
+        }
+    },
+    
+    // 更新Excel数据统计信息
+    updateExcelDataStats() {
+        const statsElement = this.elements.inputs.excel.dataStats;
+        if (!statsElement) return;
+        
+        if (!ExcelLoader.isDataLoaded) {
+            statsElement.innerHTML = '<span>未加载数据</span>';
+            return;
+        }
+        
+        const stats = ExcelLoader.getDataStats();
+        statsElement.innerHTML = `
+            <span>总计: ${stats.total} 个颜色</span>
+            <span>可见: ${stats.visible} 个</span>
+            <span>高亮: ${stats.highlighted} 个</span>
+            <span>X范围: ${stats.xRange.min.toFixed(4)} - ${stats.xRange.max.toFixed(4)}</span>
+            <span>Y范围: ${stats.yRange.min.toFixed(4)} - ${stats.yRange.max.toFixed(4)}</span>
+        `;
+    },
+    
+    // 处理Canvas上的Excel数据点点击
+    handleExcelDataPointClick(mouseEvent) {
+        if (!ExcelLoader.isDataLoaded) return false;
+        
+        const rect = this.elements.canvas.getBoundingClientRect();
+        const mouseX = mouseEvent.clientX - rect.left;
+        const mouseY = mouseEvent.clientY - rect.top;
+        
+        // 应用变换
+        const scaleFactor = ChartRenderer.getCanvasScaleFactor();
+        const adjustedX = mouseX * scaleFactor;
+        const adjustedY = mouseY * scaleFactor;
+        
+        // 查找点击的数据点
+        const clickedColor = ChartRenderer.findExcelDataPointAt(adjustedX, adjustedY);
+        
+        if (clickedColor) {
+            // 切换高亮状态
+            ExcelLoader.setColorHighlight(clickedColor.id, !clickedColor.highlighted);
+            
+            // 如果表格已初始化，滚动到对应行
+            if (typeof ColorTable !== 'undefined') {
+                ColorTable.goToColor(clickedColor.id);
+            }
+            
+            Logger.info(`点击了颜色点: ${clickedColor.name}`, 'ExcelDataPoint');
+            return true;
+        }
+        
+        return false;
     }
 };
 

@@ -283,4 +283,337 @@ input[type="number"] {
     color: #1976d2;
     font-size: 14px;
     text-align: center;
+}
+
+/* Excel导入相关样式 */
+.excel-import-section {
+    margin-bottom: 20px;
+}
+
+.file-upload {
+    background-color: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.upload-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.upload-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.upload-btn:hover {
+    background-color: #0056b3;
+}
+
+.upload-btn.secondary {
+    background-color: #6c757d;
+}
+
+.upload-btn.secondary:hover {
+    background-color: #545b62;
+}
+
+.upload-info {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.data-display {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.data-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    font-size: 14px;
+    color: #495057;
+}
+
+.data-stats span {
+    background-color: #e9ecef;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+/* 颜色表格样式 */
+.excel-table-section {
+    margin-top: 20px;
+}
+
+.color-table-wrapper {
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.table-controls {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.search-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-input {
+    padding: 6px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 200px;
+}
+
+.clear-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.clear-btn:hover {
+    background-color: #545b62;
+}
+
+.view-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.color-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.color-table th {
+    background-color: #e9ecef;
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.color-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.color-table th.sortable:hover {
+    background-color: #dee2e6;
+}
+
+.sort-indicator {
+    margin-left: 5px;
+    color: #6c757d;
+}
+
+.color-table td {
+    padding: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.color-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.color-row:hover {
+    background-color: #f8f9fa;
+}
+
+.color-row.highlighted {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.id-cell {
+    font-weight: 600;
+    color: #495057;
+    width: 60px;
+}
+
+.name-cell {
+    width: 120px;
+}
+
+.coord-cell {
+    font-family: monospace;
+    color: #6f42c1;
+    width: 80px;
+}
+
+.color-preview-cell {
+    width: 60px;
+    text-align: center;
+}
+
+.color-swatch {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    display: inline-block;
+    cursor: help;
+}
+
+.action-cell {
+    width: 80px;
+    text-align: center;
+}
+
+.action-btn {
+    background: none;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    padding: 2px 6px;
+    margin: 0 2px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background-color: #f8f9fa;
+}
+
+.visibility-btn.visible {
+    color: #28a745;
+    border-color: #28a745;
+}
+
+.visibility-btn.hidden {
+    color: #6c757d;
+    border-color: #6c757d;
+}
+
+.highlight-btn.active {
+    color: #ffc107;
+    border-color: #ffc107;
+    background-color: #fff3cd;
+}
+
+/* 表格底部 */
+.table-footer {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.status-bar {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.page-btn {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    color: #007bff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.page-btn:hover {
+    background-color: #e9ecef;
+}
+
+.page-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.page-ellipsis {
+    padding: 6px;
+    color: #6c757d;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .table-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-input {
+        min-width: auto;
+    }
+    
+    .upload-controls {
+        flex-direction: column;
+    }
+    
+    .data-stats {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .table-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .pagination {
+        justify-content: center;
+    }
 } 
