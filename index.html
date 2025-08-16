@@ -40,15 +40,15 @@
                             <h3>红色 (R)</h3>
                             <div class="input-group">
                                 <label>x坐标:</label>
-                                <input type="number" id="red-x" step="0.0001" min="0" max="1" value="0.7">
+                                <input type="number" id="red-x" step="0.0001" min="0" max="1" value="0.7000" inputmode="decimal">
                             </div>
                             <div class="input-group">
                                 <label>y坐标:</label>
-                                <input type="number" id="red-y" step="0.0001" min="0" max="1" value="0.3">
+                                <input type="number" id="red-y" step="0.0001" min="0" max="1" value="0.3000" inputmode="decimal">
                             </div>
                             <div class="input-group">
                                 <label>光通量 (Lv):</label>
-                                <input type="number" id="red-lv" step="0.1" min="0" value="10">
+                                <input type="number" id="red-lv" step="0.0001" min="0" value="10.0000" inputmode="decimal">
                             </div>
                             
                             <!-- LED分BIN选择器 -->
@@ -84,15 +84,15 @@
                             <h3>绿色 (G)</h3>
                             <div class="input-group">
                                 <label>x坐标:</label>
-                                <input type="number" id="green-x" step="0.0001" min="0" max="1" value="0.2">
+                                <input type="number" id="green-x" step="0.0001" min="0" max="1" value="0.2000" inputmode="decimal">
                             </div>
                             <div class="input-group">
                                 <label>y坐标:</label>
-                                <input type="number" id="green-y" step="0.0001" min="0" max="1" value="0.7">
+                                <input type="number" id="green-y" step="0.0001" min="0" max="1" value="0.7000" inputmode="decimal">
                             </div>
                             <div class="input-group">
                                 <label>光通量 (Lv):</label>
-                                <input type="number" id="green-lv" step="0.1" min="0" value="10">
+                                <input type="number" id="green-lv" step="0.0001" min="0" value="10.0000" inputmode="decimal">
                             </div>
                             
                             <!-- LED分BIN选择器 -->
@@ -128,15 +128,15 @@
                             <h3>蓝色 (B)</h3>
                             <div class="input-group">
                                 <label>x坐标:</label>
-                                <input type="number" id="blue-x" step="0.0001" min="0" max="1" value="0.1">
+                                <input type="number" id="blue-x" step="0.0001" min="0" max="1" value="0.1000" inputmode="decimal">
                             </div>
                             <div class="input-group">
                                 <label>y坐标:</label>
-                                <input type="number" id="blue-y" step="0.0001" min="0" max="1" value="0.1">
+                                <input type="number" id="blue-y" step="0.0001" min="0" max="1" value="0.1000" inputmode="decimal">
                             </div>
                             <div class="input-group">
                                 <label>光通量 (Lv):</label>
-                                <input type="number" id="blue-lv" step="0.1" min="0" value="10">
+                                <input type="number" id="blue-lv" step="0.0001" min="0" value="10.0000" inputmode="decimal">
                             </div>
                             
                             <!-- LED分BIN选择器 -->
@@ -230,15 +230,15 @@
                             <h4>手动输入目标色</h4>
                             <div class="input-group">
                                 <label>目标色 x 坐标:</label>
-                                <input type="number" id="manual-target-x" step="0.0001" min="0" max="1" value="0.3333">
+                                <input type="number" id="manual-target-x" step="0.0001" min="0" max="1" value="0.3333" inputmode="decimal">
                             </div>
                             <div class="input-group">
                                 <label>目标色 y 坐标:</label>
-                                <input type="number" id="manual-target-y" step="0.0001" min="0" max="1" value="0.3333">
+                                <input type="number" id="manual-target-y" step="0.0001" min="0" max="1" value="0.3333" inputmode="decimal">
                             </div>
                             <div class="input-group">
                                 <label>目标光通量 (Lv):</label>
-                                <input type="number" id="manual-target-lv" step="0.1" min="0" value="1">
+                                <input type="number" id="manual-target-lv" step="0.0001" min="0" value="1.0000" inputmode="decimal">
                                 <span class="max-lv-hint" id="manual-max-lv-hint">最大可达: 计算中...</span>
                             </div>
                             <button id="add-manual-target" class="upload-btn">添加到目标列表</button>
@@ -255,7 +255,7 @@
                             </div>
                             <div class="input-group">
                                 <label>目标光通量 (Lv):</label>
-                                <input type="number" id="excel-target-lv" step="0.1" min="0" value="1">
+                                <input type="number" id="excel-target-lv" step="0.0001" min="0" value="1.0000" inputmode="decimal">
                                 <span class="max-lv-hint" id="excel-max-lv-hint">最大可达: 计算中...</span>
                             </div>
                             <button id="add-excel-target" class="upload-btn">添加到目标列表</button>
@@ -273,7 +273,10 @@
                     
                     <p class="mode-note">注意：RGB三基色坐标使用模式1中的设置</p>
                     
-                    <button id="calculate-lv" class="calc-btn">计算所需光通量</button>
+                    <div class="calc-btn-group">
+                        <button id="calculate-lv" class="calc-btn calc-btn-left">按设定值计算</button>
+                        <button id="calculate-lv-max" class="calc-btn calc-btn-right">按最大值计算</button>
+                    </div>
                     
                     <div class="result">
                         <h3>计算结果</h3>
@@ -291,7 +294,7 @@
                             <h3>红色 (R)</h3>
                             <div class="input-group">
                                 <label>最大光通量:</label>
-                                <input type="number" id="red-max-lv" step="0.1" min="0" value="100">
+                                <input type="number" id="red-max-lv" step="0.0001" min="0" value="100.0000" inputmode="decimal">
                             </div>
                         </div>
                         
@@ -299,7 +302,7 @@
                             <h3>绿色 (G)</h3>
                             <div class="input-group">
                                 <label>最大光通量:</label>
-                                <input type="number" id="green-max-lv" step="0.1" min="0" value="100">
+                                <input type="number" id="green-max-lv" step="0.0001" min="0" value="100.0000" inputmode="decimal">
                             </div>
                         </div>
                         
@@ -307,7 +310,7 @@
                             <h3>蓝色 (B)</h3>
                             <div class="input-group">
                                 <label>最大光通量:</label>
-                                <input type="number" id="blue-max-lv" step="0.1" min="0" value="100">
+                                <input type="number" id="blue-max-lv" step="0.0001" min="0" value="100.0000" inputmode="decimal">
                             </div>
                         </div>
                     </div>
@@ -349,6 +352,7 @@
     <script src="js/led-bin-manager.js"></script>
     <script src="js/logger.js"></script>
     <script src="js/notification.js"></script>
+    <script src="js/xyz-calculator.js"></script>
     <script src="js/color-calculator.js"></script>
     <script src="js/chart-renderer.js"></script>
     <script src="js/excel-loader.js"></script>
@@ -356,5 +360,6 @@
     <script src="js/app-controller.js"></script>
     <script src="js/script.js"></script>
     <script src="js/debug.js"></script>
+    <script src="test-console.js"></script>
 </body>
 </html> 
