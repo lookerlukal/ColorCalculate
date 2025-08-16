@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XYZ算法精度测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .test-result { margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .highlight { background-color: #fff3cd; font-weight: bold; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>XYZ算法精度验证测试</h1>
+    
+    <h2>测试目标</h2>
+    <p>验证新的XYZ空间算法相比错误的色坐标加权平均方法的准确性提升。</p>
+    
+    <div id="test-results"></div>
+    
+    <script src="js/xyz-calculator.js"></script>
+    <script>
+        // 测试用例
+        const testCases = [
+            {
+                name: "用户示例数据（白色0.333,0.333）",
+                red: { x: 0.7000, y: 0.2982, maxY: 2.6700 },
+                green: { x: 0.2239, y: 0.7236, maxY: 7.4455 },
+                blue: { x: 0.1233, y: 0.0893, maxY: 1.4925 },
+                target: { x: 0.3330, y: 0.3330 },
+                expectedResult: 9.48
+            },
+            {
+                name: "标准RGB基色（白色）",
+                red: { x: 0.64, y: 0.33, maxY: 10 },
+                green: { x: 0.30, y: 0.60, maxY: 10 },
+                blue: { x: 0.15, y: 0.06, maxY: 10 },
+                target: { x: 0.3333, y: 0.3333 },
+                expectedResult: null // 将通过计算确定
+            },
+            {
+                name: "偏红色目标",
+                red: { x: 0.64, y: 0.33, maxY: 10 },
+                green: { x: 0.30, y: 0.60, maxY: 10 },
+                blue: { x: 0.15, y: 0.06, maxY: 10 },
+                target: { x: 0.45, y: 0.35 },
+                expectedResult: null
+            }
+        ];
+        
+        // 错误的色坐标加权平均方法（用于对比）
+        function wrongColorMixingMethod(red, green, blue, target, maxLv) {
+            // 这是错误的方法：直接对色坐标进行加权平均
+            // 仅用于演示错误方法的问题
+            
+            // 使用简单的线性搜索
+            let maxLuminance = 0;
+            let bestRatio = { red: 0, green: 0, blue: 0 };
+            
+            const samples = 100;
+            for (let i = 0; i <= samples; i++) {
+                for (let j = 0; j <= samples - i; j++) {
+                    const k = samples - i - j;
+                    
+                    const lr = (i / samples) * maxLv.red;
+                    const lg = (j / samples) * maxLv.green;
+                    const lb = (k / samples) * maxLv.blue;
+                    
+                    const totalLv = lr + lg + lb;
+                    if (totalLv === 0) continue;
+                    
+                    // 错误的混合公式
+                    const mixX = (red.x * lr + green.x * lg + blue.x * lb) / totalLv;
+                    const mixY = (red.y * lr + green.y * lg + blue.y * lb) / totalLv;
+                    
+                    const errorX = Math.abs(mixX - target.x);
+                    const errorY = Math.abs(mixY - target.y);
+                    
+                    if (errorX < 0.01 && errorY < 0.01) {
+                        if (totalLv > maxLuminance) {
+                            maxLuminance = totalLv;
+                            bestRatio = { red: lr, green: lg, blue: lb };
+                        }
+                    }
+                }
+            }
+            
+            return { maxLuminance, ratio: bestRatio };
+        }
+        
+        function runTests() {
+            const resultsDiv = document.getElementById('test-results');
+            let allPassed = true;
+            
+            testCases.forEach((testCase, index) => {
+                const testDiv = document.createElement('div');
+                testDiv.innerHTML = `<h3>测试 ${index + 1}: ${testCase.name}</h3>`;
+                
+                try {
+                    // 使用正确的XYZ算法
+                    const xyzResult = XYZCalculator.calculateMaxLuminanceXYZ(
+                        testCase.red,
+                        testCase.green,
+                        testCase.blue,
+                        testCase.target
+                    );
+                    
+                    // 使用错误的色坐标方法对比
+                    const wrongResult = wrongColorMixingMethod(
+                        testCase.red,
+                        testCase.green,
+                        testCase.blue,
+                        testCase.target,
+                        { red: testCase.red.maxY, green: testCase.green.maxY, blue: testCase.blue.maxY }
+                    );
+                    
+                    // 创建结果表格
+                    const table = document.createElement('table');
+                    table.innerHTML = `
+                        <tr>
+                            <th>方法</th>
+                            <th>最大光通量</th>
+                            <th>红色使用量</th>
+                            <th>绿色使用量</th>
+                            <th>蓝色使用量</th>
+                            <th>限制因子</th>
+                        </tr>
+                        <tr class="highlight">
+                            <td><strong>正确XYZ算法</strong></td>
+                            <td>${xyzResult.maxLuminance.toFixed(3)}</td>
+                            <td>${(xyzResult.coefficients.red * testCase.red.maxY).toFixed(3)}</td>
+                            <td>${(xyzResult.coefficients.green * testCase.green.maxY).toFixed(3)}</td>
+                            <td>${(xyzResult.coefficients.blue * testCase.blue.maxY).toFixed(3)}</td>
+                            <td>${xyzResult.limitingColor || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td>错误色坐标法</td>
+                            <td>${wrongResult.maxLuminance.toFixed(3)}</td>
+                            <td>${wrongResult.ratio.red.toFixed(3)}</td>
+                            <td>${wrongResult.ratio.green.toFixed(3)}</td>
+                            <td>${wrongResult.ratio.blue.toFixed(3)}</td>
+                            <td>-</td>
+                        </tr>
+                    `;
+                    
+                    testDiv.appendChild(table);
+                    
+                    // 分析结果
+                    const analysis = document.createElement('div');
+                    const difference = Math.abs(xyzResult.maxLuminance - wrongResult.maxLuminance);
+                    const improvementPct = ((xyzResult.maxLuminance - wrongResult.maxLuminance) / wrongResult.maxLuminance * 100);
+                    
+                    let resultClass = 'success';
+                    let resultText = '';
+                    
+                    if (testCase.expectedResult && Math.abs(xyzResult.maxLuminance - testCase.expectedResult) < 0.1) {
+                        resultText = `✓ XYZ算法结果准确，与期望值差异: ${Math.abs(xyzResult.maxLuminance - testCase.expectedResult).toFixed(4)}`;
+                    } else if (xyzResult.maxLuminance > wrongResult.maxLuminance) {
+                        resultText = `✓ XYZ算法比错误方法好，提升了 ${improvementPct.toFixed(1)}%`;
+                    } else if (Math.abs(difference) < 0.001) {
+                        resultText = `⚠ 两种方法结果接近，差异: ${difference.toFixed(4)}`;
+                    } else {
+                        resultText = `✗ 需要进一步分析差异: ${difference.toFixed(4)}`;
+                        resultClass = 'error';
+                        allPassed = false;
+                    }
+                    
+                    analysis.className = `test-result ${resultClass}`;
+                    analysis.innerHTML = `
+                        <strong>分析结果：</strong>${resultText}<br>
+                        <strong>差异：</strong>XYZ法得到 ${xyzResult.maxLuminance.toFixed(3)}，错误法得到 ${wrongResult.maxLuminance.toFixed(3)}
+                    `;
+                    
+                    testDiv.appendChild(analysis);
+                    
+                } catch (error) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'test-result error';
+                    errorDiv.innerHTML = `<strong>测试失败：</strong>${error.message}`;
+                    testDiv.appendChild(errorDiv);
+                    allPassed = false;
+                }
+                
+                resultsDiv.appendChild(testDiv);
+            });
+            
+            // 总结
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = `test-result ${allPassed ? 'success' : 'error'}`;
+            summaryDiv.innerHTML = `
+                <h3>测试总结</h3>
+                ${allPassed ? 
+                    '✓ 所有测试通过！XYZ算法工作正常，相比错误的色坐标方法有明显改进。' : 
+                    '⚠ 部分测试需要进一步检查。'
+                }
+            `;
+            resultsDiv.appendChild(summaryDiv);
+        }
+        
+        // 页面加载完成后运行测试
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>

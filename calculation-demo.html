@@ -371,81 +371,121 @@
             </div>
         </div>
         
-        <!-- 步骤3：建立方程组 -->
+        <!-- 步骤3：转换到XYZ色彩空间 -->
         <div id="step3" class="step-section">
-            <h2>第三步：建立线性方程组</h2>
+            <h2>第三步：转换到XYZ色彩空间</h2>
             
-            <h3>颜色混合原理</h3>
+            <h3>为什么要转换到XYZ空间？</h3>
             <div class="explanation">
-                当RGB三种光混合时，合成色的坐标是各基色坐标的加权平均，权重就是各基色的光通量。
-                我们需要找到合适的RGB光通量比例，使得混合后得到目标色。
+                <strong>重要原理：</strong>颜色的线性叠加性质<span class="warning">只在XYZ三刺激值空间中成立</span>，
+                直接对色坐标(x,y)进行加权平均是错误的！
+                <br><br>
+                当两个或多个光源混合时，它们的三刺激值(X,Y,Z)可以直接相加，而色坐标需要重新计算。
             </div>
             
-            <h3>方程组推导</h3>
+            <h3>转换公式</h3>
             <div class="explanation">
-                设红色光通量为L<sub>r</sub>，绿色为L<sub>g</sub>，蓝色为L<sub>b</sub>，总光通量为L<sub>t</sub>，则有：
+                将色坐标(x, y)和光通量Y转换为三刺激值(X, Y, Z)：
             </div>
             
             <div class="formula">
-                <div>第一个方程（x坐标平衡）：</div>
-                <div>(x<sub>r</sub>/y<sub>r</sub>)·L<sub>r</sub> + (x<sub>g</sub>/y<sub>g</sub>)·L<sub>g</sub> + (x<sub>b</sub>/y<sub>b</sub>)·L<sub>b</sub> = (x<sub>t</sub>/y<sub>t</sub>)·L<sub>t</sub></div>
-                <br>
-                <div>第二个方程（光通量守恒）：</div>
-                <div>L<sub>r</sub> + L<sub>g</sub> + L<sub>b</sub> = L<sub>t</sub></div>
-                <br>
-                <div>第三个方程（z坐标平衡）：</div>
-                <div>(z<sub>r</sub>/y<sub>r</sub>)·L<sub>r</sub> + (z<sub>g</sub>/y<sub>g</sub>)·L<sub>g</sub> + (z<sub>b</sub>/y<sub>b</sub>)·L<sub>b</sub> = (z<sub>t</sub>/y<sub>t</sub>)·L<sub>t</sub></div>
+                <div>X = (x / y) × Y</div>
+                <div>Y = Y （光通量本身就是Y刺激值）</div>
+                <div>Z = ((1 - x - y) / y) × Y</div>
             </div>
             
-            <h3>标准化处理</h3>
+            <h3>各基色的XYZ值计算</h3>
+            <div id="xyz-calculations" class="result-box"></div>
+            
+            <h3>混合原理</h3>
             <div class="explanation">
-                为了简化计算，我们先假设总光通量L<sub>t</sub> = 1，求出各基色的比例。
-                这样方程组变为：
+                设红、绿、蓝的使用系数为c<sub>R</sub>、c<sub>G</sub>、c<sub>B</sub>（范围0-1），
+                则混合后的三刺激值为：
             </div>
             
-            <div id="matrix-equation" class="formula"></div>
+            <div class="formula">
+                <div>X<sub>mix</sub> = c<sub>R</sub> × X<sub>R,max</sub> + c<sub>G</sub> × X<sub>G,max</sub> + c<sub>B</sub> × X<sub>B,max</sub></div>
+                <div>Y<sub>mix</sub> = c<sub>R</sub> × Y<sub>R,max</sub> + c<sub>G</sub> × Y<sub>G,max</sub> + c<sub>B</sub> × Y<sub>B,max</sub></div>
+                <div>Z<sub>mix</sub> = c<sub>R</sub> × Z<sub>R,max</sub> + c<sub>G</sub> × Z<sub>G,max</sub> + c<sub>B</sub> × Z<sub>B,max</sub></div>
+            </div>
         </div>
         
-        <!-- 步骤4：求解方程组 -->
+        <!-- 步骤4：建立约束条件 -->
         <div id="step4" class="step-section">
-            <h2>第四步：求解线性方程组</h2>
+            <h2>第四步：建立约束条件</h2>
             
-            <h3>使用高斯消元法</h3>
+            <h3>目标色约束</h3>
             <div class="explanation">
-                我们使用高斯消元法来求解这个3×3的线性方程组。这个方法通过行变换将系数矩阵化为上三角形式，
-                然后通过回代求解。
+                混合后的颜色必须符合目标色的色坐标。根据色坐标的定义：
             </div>
             
-            <div id="gaussian-steps" class="formula"></div>
+            <div class="formula">
+                <div>x<sub>目标</sub> = X<sub>mix</sub> / (X<sub>mix</sub> + Y<sub>mix</sub> + Z<sub>mix</sub>)</div>
+                <div>y<sub>目标</sub> = Y<sub>mix</sub> / (X<sub>mix</sub> + Y<sub>mix</sub> + Z<sub>mix</sub>)</div>
+            </div>
             
-            <h3>求解结果</h3>
-            <div id="solution-result" class="result-box"></div>
+            <div class="explanation">
+                为了消除分母，我们将上述方程转换为线性约束：
+            </div>
+            
+            <div class="formula">
+                <div>约束1：y<sub>目标</sub> × X<sub>mix</sub> - x<sub>目标</sub> × Y<sub>mix</sub> = 0</div>
+                <div>约束2：y<sub>目标</sub> × Z<sub>mix</sub> - z<sub>目标</sub> × Y<sub>mix</sub> = 0</div>
+                <div>其中：z<sub>目标</sub> = 1 - x<sub>目标</sub> - y<sub>目标</sub></div>
+            </div>
+            
+            <div id="constraint-equations" class="formula"></div>
+            
+            <h3>线性规划问题</h3>
+            <div class="explanation">
+                现在我们有了一个<strong>线性规划问题</strong>：
+                <br>
+                <strong>目标：</strong>最大化 Y<sub>mix</sub>（总光通量）
+                <br>
+                <strong>约束：</strong>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>两个目标色坐标约束方程</li>
+                    <li>0 ≤ c<sub>R</sub> ≤ 1, 0 ≤ c<sub>G</sub> ≤ 1, 0 ≤ c<sub>B</sub> ≤ 1</li>
+                </ul>
+            </div>
         </div>
         
-        <!-- 步骤5：计算缩放因子 -->
+        <!-- 步骤5：线性规划求解 -->
         <div id="step5" class="step-section">
-            <h2>第五步：计算最大可能的光通量</h2>
+            <h2>第五步：线性规划求解</h2>
             
-            <h3>理解限制条件</h3>
+            <h3>关键洞察</h3>
             <div class="explanation">
-                我们已经知道了达到目标色所需的RGB比例，但每个基色都有最大光通量限制。
-                现在要找出在不超过任何限制的情况下，能达到的最大总光通量。
+                由于我们有2个约束方程和3个未知数，这是一个<strong>欠定方程组</strong>。
+                最优解必然出现在可行域的<strong>边界</strong>上，即至少有一个基色达到满载状态（c = 1）。
             </div>
             
-            <h3>计算缩放因子</h3>
+            <h3>求解策略</h3>
             <div class="explanation">
-                对于每个基色，计算其最大光通量与所需比例的比值：
+                我们分别假设每个基色满载，求解其他两个系数，然后比较哪种情况能得到最大光通量：
             </div>
             
-            <div id="scale-factors" class="formula"></div>
-            
-            <h3>确定限制因子</h3>
-            <div class="explanation">
-                最小的缩放因子决定了最大可能的总光通量。这是因为一旦某个基色达到其最大值，
-                就不能再增加总光通量了。
+            <div class="formula">
+                <div><strong>情况1：</strong>假设红色满载 (c<sub>R</sub> = 1)</div>
+                <div><strong>情况2：</strong>假设绿色满载 (c<sub>G</sub> = 1)</div>
+                <div><strong>情况3：</strong>假设蓝色满载 (c<sub>B</sub> = 1)</div>
             </div>
             
-            <div id="limiting-factor" class="result-box"></div>
+            <div id="optimization-process" class="result-box"></div>
+            
+            <h3>求解过程</h3>
+            <div class="explanation">
+                对于每种情况，我们将约束方程组简化为2×2的线性方程组，然后求解：
+            </div>
+            
+            <div id="solution-steps" class="formula"></div>
+            
+            <h3>有效性检验</h3>
+            <div class="explanation">
+                每个解都必须满足：<strong>0 ≤ c<sub>i</sub> ≤ 1</strong>
+                <br>
+                如果某个系数超出范围，说明该解不可行。
+            </div>
         </div>
         
         <!-- 步骤6：最终结果 -->
@@ -474,6 +514,9 @@
             <div id="conclusion" class="explanation"></div>
         </div>
     </div>
+    
+    <!-- 引入XYZ计算模块 -->
+    <script src="js/xyz-calculator.js"></script>
     
     <script>
         function startCalculation() {
@@ -575,215 +618,175 @@
                 <div>目标色：z<sub>t</sub> = 1 - ${data.target.x.toFixed(4)} - ${data.target.y.toFixed(4)} = <span class="highlight">${data.target.z.toFixed(4)}</span></div>
             `;
             
-            setTimeout(() => step3_buildEquations(data), 1000);
+            setTimeout(() => step3_convertToXYZ(data), 1000);
         }
         
-        function step3_buildEquations(data) {
+        function step3_convertToXYZ(data) {
             document.getElementById('step3').classList.add('active');
             
-            // 构建系数矩阵
-            const A = [
-                [data.red.x / data.red.y, data.green.x / data.green.y, data.blue.x / data.blue.y],
-                [1, 1, 1],
-                [data.red.z / data.red.y, data.green.z / data.green.y, data.blue.z / data.blue.y]
-            ];
-            
-            const b = [
-                data.target.x / data.target.y,
-                1,
-                data.target.z / data.target.y
-            ];
-            
-            // 显示矩阵方程
-            const matrixEq = document.getElementById('matrix-equation');
-            matrixEq.innerHTML = `
-                <div style="text-align: center;">
-                    <div class="matrix">
-                        <span class="matrix-bracket">[</span>
-                        <div class="matrix-content">
-                            <div class="matrix-row">
-                                <span class="matrix-cell">${A[0][0].toFixed(3)}</span>
-                                <span class="matrix-cell">${A[0][1].toFixed(3)}</span>
-                                <span class="matrix-cell">${A[0][2].toFixed(3)}</span>
-                            </div>
-                            <div class="matrix-row">
-                                <span class="matrix-cell">${A[1][0].toFixed(3)}</span>
-                                <span class="matrix-cell">${A[1][1].toFixed(3)}</span>
-                                <span class="matrix-cell">${A[1][2].toFixed(3)}</span>
-                            </div>
-                            <div class="matrix-row">
-                                <span class="matrix-cell">${A[2][0].toFixed(3)}</span>
-                                <span class="matrix-cell">${A[2][1].toFixed(3)}</span>
-                                <span class="matrix-cell">${A[2][2].toFixed(3)}</span>
-                            </div>
-                        </div>
-                        <span class="matrix-bracket">]</span>
-                    </div>
-                    ×
-                    <div class="matrix">
-                        <span class="matrix-bracket">[</span>
-                        <div class="matrix-content">
-                            <div class="matrix-row"><span class="matrix-cell">r</span></div>
-                            <div class="matrix-row"><span class="matrix-cell">g</span></div>
-                            <div class="matrix-row"><span class="matrix-cell">b</span></div>
-                        </div>
-                        <span class="matrix-bracket">]</span>
-                    </div>
-                    =
-                    <div class="matrix">
-                        <span class="matrix-bracket">[</span>
-                        <div class="matrix-content">
-                            <div class="matrix-row"><span class="matrix-cell">${b[0].toFixed(3)}</span></div>
-                            <div class="matrix-row"><span class="matrix-cell">${b[1].toFixed(3)}</span></div>
-                            <div class="matrix-row"><span class="matrix-cell">${b[2].toFixed(3)}</span></div>
-                        </div>
-                        <span class="matrix-bracket">]</span>
-                    </div>
-                </div>
-                <div style="margin-top: 15px; text-align: center; color: #7f8c8d;">
-                    其中 r, g, b 是红、绿、蓝三基色的光通量比例（总和为1）
-                </div>
-            `;
-            
-            // 保存数据供下一步使用
-            data.A = A;
-            data.b = b;
-            
-            setTimeout(() => step4_solveEquations(data), 1500);
-        }
-        
-        function step4_solveEquations(data) {
-            document.getElementById('step4').classList.add('active');
-            
             try {
-                // 求解线性方程组
-                const solution = solveLinearSystem(data.A, data.b);
+                // 使用XYZ计算模块转换各基色
+                data.redXYZ = XYZCalculator.xyToXYZ(data.red.x, data.red.y, data.red.max);
+                data.greenXYZ = XYZCalculator.xyToXYZ(data.green.x, data.green.y, data.green.max);
+                data.blueXYZ = XYZCalculator.xyToXYZ(data.blue.x, data.blue.y, data.blue.max);
                 
-                // 检查解的有效性
-                if (solution[0] < 0 || solution[1] < 0 || solution[2] < 0) {
-                    showError('目标色在RGB三角形外部，无法通过RGB混合得到！');
-                    document.getElementById('solution-result').innerHTML = 
-                        '<span class="warning">计算得到负值，表示目标色无法实现</span>';
-                    return;
-                }
-                
-                // 显示求解过程
-                document.getElementById('gaussian-steps').innerHTML = `
-                    <div>使用高斯消元法求解...</div>
-                    <div style="margin-top: 10px;">经过行变换和回代，得到解：</div>
+                // 显示XYZ计算结果
+                const xyzCalc = document.getElementById('xyz-calculations');
+                xyzCalc.innerHTML = `
+                    <div><strong>红色基色最大XYZ值：</strong></div>
+                    <div>X<sub>R</sub> = (${data.red.x.toFixed(4)} / ${data.red.y.toFixed(4)}) × ${data.red.max} = <span class="highlight">${data.redXYZ.X.toFixed(3)}</span></div>
+                    <div>Y<sub>R</sub> = ${data.red.max} = <span class="highlight">${data.redXYZ.Y.toFixed(3)}</span></div>
+                    <div>Z<sub>R</sub> = ((1 - ${data.red.x.toFixed(4)} - ${data.red.y.toFixed(4)}) / ${data.red.y.toFixed(4)}) × ${data.red.max} = <span class="highlight">${data.redXYZ.Z.toFixed(3)}</span></div>
+                    <br>
+                    <div><strong>绿色基色最大XYZ值：</strong></div>
+                    <div>X<sub>G</sub> = (${data.green.x.toFixed(4)} / ${data.green.y.toFixed(4)}) × ${data.green.max} = <span class="highlight">${data.greenXYZ.X.toFixed(3)}</span></div>
+                    <div>Y<sub>G</sub> = ${data.green.max} = <span class="highlight">${data.greenXYZ.Y.toFixed(3)}</span></div>
+                    <div>Z<sub>G</sub> = ((1 - ${data.green.x.toFixed(4)} - ${data.green.y.toFixed(4)}) / ${data.green.y.toFixed(4)}) × ${data.green.max} = <span class="highlight">${data.greenXYZ.Z.toFixed(3)}</span></div>
+                    <br>
+                    <div><strong>蓝色基色最大XYZ值：</strong></div>
+                    <div>X<sub>B</sub> = (${data.blue.x.toFixed(4)} / ${data.blue.y.toFixed(4)}) × ${data.blue.max} = <span class="highlight">${data.blueXYZ.X.toFixed(3)}</span></div>
+                    <div>Y<sub>B</sub> = ${data.blue.max} = <span class="highlight">${data.blueXYZ.Y.toFixed(3)}</span></div>
+                    <div>Z<sub>B</sub> = ((1 - ${data.blue.x.toFixed(4)} - ${data.blue.y.toFixed(4)}) / ${data.blue.y.toFixed(4)}) × ${data.blue.max} = <span class="highlight">${data.blueXYZ.Z.toFixed(3)}</span></div>
                 `;
                 
-                // 显示解
-                document.getElementById('solution-result').innerHTML = `
-                    <div>红色比例 r = <span class="highlight">${solution[0].toFixed(4)}</span></div>
-                    <div>绿色比例 g = <span class="highlight">${solution[1].toFixed(4)}</span></div>
-                    <div>蓝色比例 b = <span class="highlight">${solution[2].toFixed(4)}</span></div>
-                    <div style="margin-top: 10px;">验证：r + g + b = ${(solution[0] + solution[1] + solution[2]).toFixed(4)} ≈ 1.000 ✓</div>
-                `;
-                
-                // 保存解
-                data.ratios = {
-                    red: solution[0],
-                    green: solution[1],
-                    blue: solution[2]
-                };
-                
-                setTimeout(() => step5_calculateScaling(data), 1500);
+                setTimeout(() => step4_buildConstraints(data), 1500);
                 
             } catch (error) {
-                showError('方程组求解失败：' + error.message);
+                showError('XYZ转换失败：' + error.message);
             }
         }
         
-        function step5_calculateScaling(data) {
+        function step4_buildConstraints(data) {
+            document.getElementById('step4').classList.add('active');
+            
+            // 计算目标色的z坐标
+            const zt = 1 - data.target.x - data.target.y;
+            
+            // 显示约束方程
+            const constraintEq = document.getElementById('constraint-equations');
+            constraintEq.innerHTML = `
+                <div><strong>具体约束方程：</strong></div>
+                <div>约束1：${data.target.y.toFixed(4)} × X<sub>mix</sub> - ${data.target.x.toFixed(4)} × Y<sub>mix</sub> = 0</div>
+                <div>约束2：${data.target.y.toFixed(4)} × Z<sub>mix</sub> - ${zt.toFixed(4)} × Y<sub>mix</sub> = 0</div>
+                <br>
+                <div>展开后：</div>
+                <div>约束1：${data.target.y.toFixed(4)} × (c<sub>R</sub>×${data.redXYZ.X.toFixed(3)} + c<sub>G</sub>×${data.greenXYZ.X.toFixed(3)} + c<sub>B</sub>×${data.blueXYZ.X.toFixed(3)}) - ${data.target.x.toFixed(4)} × (c<sub>R</sub>×${data.redXYZ.Y.toFixed(3)} + c<sub>G</sub>×${data.greenXYZ.Y.toFixed(3)} + c<sub>B</sub>×${data.blueXYZ.Y.toFixed(3)}) = 0</div>
+                <div>约束2：${data.target.y.toFixed(4)} × (c<sub>R</sub>×${data.redXYZ.Z.toFixed(3)} + c<sub>G</sub>×${data.greenXYZ.Z.toFixed(3)} + c<sub>B</sub>×${data.blueXYZ.Z.toFixed(3)}) - ${zt.toFixed(4)} × (c<sub>R</sub>×${data.redXYZ.Y.toFixed(3)} + c<sub>G</sub>×${data.greenXYZ.Y.toFixed(3)} + c<sub>B</sub>×${data.blueXYZ.Y.toFixed(3)}) = 0</div>
+            `;
+            
+            setTimeout(() => step5_linearProgramming(data), 1500);
+        }
+        
+        function step5_linearProgramming(data) {
             document.getElementById('step5').classList.add('active');
             
-            // 计算缩放因子
-            const scaleFactors = {
-                red: data.red.max / data.ratios.red,
-                green: data.green.max / data.ratios.green,
-                blue: data.blue.max / data.ratios.blue
-            };
-            
-            // 找出最小缩放因子
-            let minScale = Math.min(scaleFactors.red, scaleFactors.green, scaleFactors.blue);
-            let limitingColor = '';
-            
-            if (minScale === scaleFactors.red) limitingColor = '红色';
-            else if (minScale === scaleFactors.green) limitingColor = '绿色';
-            else limitingColor = '蓝色';
-            
-            // 显示缩放因子计算
-            document.getElementById('scale-factors').innerHTML = `
-                <div>红色缩放因子：k<sub>r</sub> = ${data.red.max} ÷ ${data.ratios.red.toFixed(4)} = <span class="highlight">${scaleFactors.red.toFixed(2)}</span></div>
-                <div>绿色缩放因子：k<sub>g</sub> = ${data.green.max} ÷ ${data.ratios.green.toFixed(4)} = <span class="highlight">${scaleFactors.green.toFixed(2)}</span></div>
-                <div>蓝色缩放因子：k<sub>b</sub> = ${data.blue.max} ÷ ${data.ratios.blue.toFixed(4)} = <span class="highlight">${scaleFactors.blue.toFixed(2)}</span></div>
-            `;
-            
-            // 显示限制因子
-            document.getElementById('limiting-factor').innerHTML = `
-                <div>最小缩放因子：<span class="highlight">${minScale.toFixed(2)}</span></div>
-                <div>限制因子：<span class="warning">${limitingColor}</span>将首先达到其最大值</div>
-            `;
-            
-            // 保存结果
-            data.minScale = minScale;
-            data.limitingColor = limitingColor;
-            
-            setTimeout(() => step6_showResults(data), 1500);
+            try {
+                // 使用XYZ计算模块进行线性规划求解
+                const result = XYZCalculator.calculateMaxLuminanceXYZ(
+                    { x: data.red.x, y: data.red.y, maxY: data.red.max },
+                    { x: data.green.x, y: data.green.y, maxY: data.green.max },
+                    { x: data.blue.x, y: data.blue.y, maxY: data.blue.max },
+                    { x: data.target.x, y: data.target.y }
+                );
+                
+                if (result.error) {
+                    showError(result.error);
+                    return;
+                }
+                
+                // 显示优化过程
+                const processDiv = document.getElementById('optimization-process');
+                processDiv.innerHTML = `
+                    <div><strong>线性规划结果：</strong></div>
+                    <div>最大光通量：<span class="highlight">${result.maxLuminance.toFixed(3)}</span></div>
+                    <div>限制因子：<span class="warning">${result.limitingColor === 'red' ? '红色' : result.limitingColor === 'green' ? '绿色' : '蓝色'}</span></div>
+                    <div>最优系数：c<sub>R</sub> = ${result.coefficients.red.toFixed(4)}, c<sub>G</sub> = ${result.coefficients.green.toFixed(4)}, c<sub>B</sub> = ${result.coefficients.blue.toFixed(4)}</div>
+                `;
+                
+                // 显示求解步骤
+                const stepsDiv = document.getElementById('solution-steps');
+                stepsDiv.innerHTML = `
+                    <div><strong>详细求解过程：</strong></div>
+                    <div>1. 假设${result.limitingColor === 'red' ? '红色' : result.limitingColor === 'green' ? '绿色' : '蓝色'}满载 (c = 1)</div>
+                    <div>2. 将约束方程简化为2×2线性方程组</div>
+                    <div>3. 求解其他两个系数</div>
+                    <div>4. 验证所有系数都在[0,1]范围内</div>
+                    <div>5. 计算总光通量：Y<sub>mix</sub> = ${result.maxLuminance.toFixed(3)}</div>
+                `;
+                
+                // 保存结果供下一步使用
+                data.xyzResult = result;
+                
+                setTimeout(() => step6_showResults(data), 1500);
+                
+            } catch (error) {
+                showError('线性规划求解失败：' + error.message);
+            }
         }
         
         function step6_showResults(data) {
             document.getElementById('step6').classList.add('active');
             
-            // 计算最终结果
-            const maxLuminance = data.minScale;
+            const result = data.xyzResult;
+            const maxLuminance = result.maxLuminance;
+            
+            // 计算实际使用量
             const usage = {
-                red: data.ratios.red * data.minScale,
-                green: data.ratios.green * data.minScale,
-                blue: data.ratios.blue * data.minScale
+                red: result.coefficients.red * data.red.max,
+                green: result.coefficients.green * data.green.max,
+                blue: result.coefficients.blue * data.blue.max
             };
             
             // 显示最大光通量
             document.getElementById('max-luminance').innerHTML = `
-                目标色能达到的最大总光通量：<span class="highlight" style="font-size: 24px;">${maxLuminance.toFixed(2)}</span>
+                目标色能达到的最大总光通量：<span class="highlight" style="font-size: 24px;">${maxLuminance.toFixed(3)}</span>
             `;
             
             // 填充使用量表格
             const tbody = document.getElementById('usage-tbody');
+            const limitingColorCN = result.limitingColor === 'red' ? '红色' : result.limitingColor === 'green' ? '绿色' : '蓝色';
+            
             tbody.innerHTML = `
-                <tr>
+                <tr${result.limitingColor === 'red' ? ' style="background-color: #ffebee;"' : ''}>
                     <td style="color: #e74c3c; font-weight: bold;">红色</td>
-                    <td>${data.ratios.red.toFixed(4)}</td>
-                    <td>${usage.red.toFixed(2)}</td>
+                    <td>${result.coefficients.red.toFixed(4)}</td>
+                    <td>${usage.red.toFixed(3)}</td>
                     <td>${data.red.max}</td>
-                    <td>${(usage.red / data.red.max * 100).toFixed(1)}%</td>
+                    <td>${(result.coefficients.red * 100).toFixed(1)}%</td>
                 </tr>
-                <tr>
+                <tr${result.limitingColor === 'green' ? ' style="background-color: #e8f5e8;"' : ''}>
                     <td style="color: #27ae60; font-weight: bold;">绿色</td>
-                    <td>${data.ratios.green.toFixed(4)}</td>
-                    <td>${usage.green.toFixed(2)}</td>
+                    <td>${result.coefficients.green.toFixed(4)}</td>
+                    <td>${usage.green.toFixed(3)}</td>
                     <td>${data.green.max}</td>
-                    <td>${(usage.green / data.green.max * 100).toFixed(1)}%</td>
+                    <td>${(result.coefficients.green * 100).toFixed(1)}%</td>
                 </tr>
-                <tr>
+                <tr${result.limitingColor === 'blue' ? ' style="background-color: #e3f2fd;"' : ''}>
                     <td style="color: #3498db; font-weight: bold;">蓝色</td>
-                    <td>${data.ratios.blue.toFixed(4)}</td>
-                    <td>${usage.blue.toFixed(2)}</td>
+                    <td>${result.coefficients.blue.toFixed(4)}</td>
+                    <td>${usage.blue.toFixed(3)}</td>
                     <td>${data.blue.max}</td>
-                    <td>${(usage.blue / data.blue.max * 100).toFixed(1)}%</td>
+                    <td>${(result.coefficients.blue * 100).toFixed(1)}%</td>
                 </tr>
             `;
             
             // 显示结论
             document.getElementById('conclusion').innerHTML = `
                 <div class="success">
-                    在给定的RGB最大光通量限制下，目标色(${data.target.x.toFixed(3)}, ${data.target.y.toFixed(3)})
-                    能够达到的最大光通量为 ${maxLuminance.toFixed(2)}。
+                    使用正确的XYZ空间算法，目标色(${data.target.x.toFixed(4)}, ${data.target.y.toFixed(4)})
+                    能够达到的最大光通量为 <strong>${maxLuminance.toFixed(3)}</strong>。
                 </div>
-                <div style="margin-top: 10px;">
-                    ${data.limitingColor}达到了其最大值 ${data[data.limitingColor.replace('色', '')].max}，
-                    成为限制因素。如果想要更高的总光通量，需要提高${data.limitingColor}的最大光通量限制。
+                <div style="margin-top: 15px;">
+                    <strong>关键结果：</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>${limitingColorCN}达到满载状态（使用系数 = 1.0），成为限制因素</li>
+                        <li>这是基于<span class="warning">正确的三刺激值叠加原理</span>得出的结果</li>
+                        <li>如需更高光通量，应提升${limitingColorCN}的最大光通量限制</li>
+                    </ul>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background-color: #fff3cd; border-radius: 5px;">
+                    <strong>⚠️ 重要提醒：</strong>本计算使用了正确的XYZ色彩空间混合理论，
+                    与直接对色坐标加权平均的错误方法相比，结果更加准确可靠。
                 </div>
             `;
         }
