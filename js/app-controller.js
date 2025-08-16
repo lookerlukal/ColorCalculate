@@ -604,6 +604,21 @@ const ColorCalculatorApp = {
         
         this.state.selectedTargets.forEach((target, index) => {
             try {
+                // 验证RGB基色数据
+                const rgbValid = ['red', 'green', 'blue'].every(color => {
+                    const point = this.state.colorPoints[color];
+                    return ColorCalculator.validateColorPoint(point);
+                });
+                
+                if (!rgbValid) {
+                    throw new Error('RGB基色数据无效，请检查模式1中的RGB设置');
+                }
+                
+                // 验证目标色数据
+                if (!target || isNaN(target.x) || isNaN(target.y) || isNaN(target.lv)) {
+                    throw new Error('目标色数据无效');
+                }
+                
                 // 构造临时colorPoints用于计算
                 const tempColorPoints = {
                     red: this.state.colorPoints.red,
@@ -1281,13 +1296,6 @@ const ColorCalculatorApp = {
     // 计算指定目标色的最大光通量（使用模式1的RGB数据）
     calculateMaxLuminanceForTarget(targetX, targetY) {
         try {
-            // 获取模式1中的RGB基色数据
-            const rgbPoints = {
-                red: this.state.colorPoints.red,
-                green: this.state.colorPoints.green,
-                blue: this.state.colorPoints.blue
-            };
-            
             // 获取模式4中的最大光通量设置（如果有）
             const maxLvValues = {
                 red: 100,
@@ -1304,12 +1312,16 @@ const ColorCalculatorApp = {
             if (greenMaxInput) maxLvValues.green = parseFloat(greenMaxInput.value) || 100;
             if (blueMaxInput) maxLvValues.blue = parseFloat(blueMaxInput.value) || 100;
             
+            // 构造完整的colorPoints对象
+            const colorPoints = {
+                red: this.state.colorPoints.red,
+                green: this.state.colorPoints.green,
+                blue: this.state.colorPoints.blue,
+                target: { x: targetX, y: targetY, lv: 0 } // lv值在最大光通量计算中不用到
+            };
+            
             // 使用ColorCalculator计算最大光通量
-            const result = ColorCalculator.calculateMaxLuminance(
-                rgbPoints.red, rgbPoints.green, rgbPoints.blue,
-                { x: targetX, y: targetY },
-                maxLvValues
-            );
+            const result = ColorCalculator.calculateMaxLuminance(colorPoints, maxLvValues);
             
             return result.maxLuminance || 0;
         } catch (error) {

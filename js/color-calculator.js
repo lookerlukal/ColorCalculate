@@ -204,10 +204,23 @@ const ColorCalculator = {
     
     // 验证颜色点参数
     validateColorPoint(point) {
-        return point && 
-               typeof point.x === 'number' && point.x >= 0 && point.x <= 1 &&
-               typeof point.y === 'number' && point.y >= 0 && point.y <= 1 &&
-               typeof point.lv === 'number' && point.lv >= 0;
+        if (!point) {
+            console.warn('颜色点为空或未定义');
+            return false;
+        }
+        if (typeof point.x !== 'number' || point.x < 0 || point.x > 1) {
+            console.warn(`无效的x坐标: ${point.x} (类型: ${typeof point.x})`);
+            return false;
+        }
+        if (typeof point.y !== 'number' || point.y < 0 || point.y > 1) {
+            console.warn(`无效的y坐标: ${point.y} (类型: ${typeof point.y})`);
+            return false;
+        }
+        if (typeof point.lv !== 'number' || point.lv < 0) {
+            console.warn(`无效的光通量: ${point.lv} (类型: ${typeof point.lv})`);
+            return false;
+        }
+        return true;
     },
     
     // 数值精度处理
