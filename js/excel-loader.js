@@ -173,12 +173,7 @@ const ExcelLoader = {
     
     // 设置颜色高亮状态
     setColorHighlight(id, highlighted) {
-        // 清除其他颜色的高亮状态
-        this.colorData.forEach(color => {
-            color.highlighted = false;
-        });
-        
-        // 设置指定颜色的高亮状态
+        // 设置指定颜色的高亮状态（支持多选）
         const color = this.getColorById(id);
         if (color) {
             color.highlighted = highlighted;
@@ -186,14 +181,27 @@ const ExcelLoader = {
         }
     },
     
+    // 清除所有高亮状态
+    clearAllHighlights() {
+        this.colorData.forEach(color => {
+            color.highlighted = false;
+        });
+        this.notifyDataChanged();
+    },
+    
     // 获取可见的颜色数据
     getVisibleColors() {
         return this.colorData.filter(color => color.visible);
     },
     
-    // 获取高亮的颜色
+    // 获取高亮的颜色（兼容性方法，返回第一个高亮颜色）
     getHighlightedColor() {
         return this.colorData.find(color => color.highlighted);
+    },
+    
+    // 获取所有高亮的颜色
+    getHighlightedColors() {
+        return this.colorData.filter(color => color.highlighted);
     },
     
     // 通知数据变化
@@ -224,7 +232,7 @@ const ExcelLoader = {
         return {
             total: this.colorData.length,
             visible: this.getVisibleColors().length,
-            highlighted: this.getHighlightedColor() ? 1 : 0,
+            highlighted: this.getHighlightedColors().length,
             xRange: this.getCoordinateRange('x'),
             yRange: this.getCoordinateRange('y')
         };

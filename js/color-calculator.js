@@ -221,5 +221,109 @@ const ColorCalculator = {
     roundToPrecision(value, precision) {
         const factor = Math.pow(10, precision);
         return Math.round(value * factor) / factor;
+    },
+    
+    // =================== LED BIN色域检测方法 ===================
+    
+    // 批量检测目标色是否超出LED BIN色域边界
+    checkGamutBoundaryForTargets(targetColors) {
+        // 检查LED BIN模式是否启用
+        if (!LEDBinManager.isLEDBinModeEnabled()) {
+            return {
+                success: false,
+                error: 'LED BIN模式未完全启用，请先为红、绿、蓝三色都选择对应的亮度和色度BIN'
+            };
+        }
+        
+        const results = [];
+        const gamutInfo = LEDBinManager.getLEDBinStatus();
+        
+        if (!gamutInfo.allEnabled || !gamutInfo.gamut) {
+            return {
+                success: false,
+                error: 'LED BIN选择不完整，无法确定色域范围'
+            };
+        }
+        
+        // 逐个检测目标色
+        targetColors.forEach((color, index) => {
+            const point = { x: color.x, y: color.y };
+            const gamutCheck = LEDBinManager.isPointInMinimumGamut(point);
+            
+            results.push({
+                id: color.id || index,
+                name: color.name || `颜色${index + 1}`,
+                x: color.x,
+                y: color.y,
+                inGamut: gamutCheck.inGamut,
+                distance: gamutCheck.distance || 0,
+                originalData: color
+            });
+        });
+        
+        // 统计结果
+        const outOfGamutCount = results.filter(r => !r.inGamut).length;
+        const totalCount = results.length;
+        
+        return {
+            success: true,
+            results: results,
+            summary: {
+                total: totalCount,
+                inGamut: totalCount - outOfGamutCount,
+                outOfGamut: outOfGamutCount,
+                percentage: totalCount > 0 ? ((totalCount - outOfGamutCount) / totalCount * 100).toFixed(1) : 0
+            },
+            gamut: gamutInfo.gamut
+        };
+    },
+    
+    // 单个目标色的色域检测
+    checkSingleColorGamut(colorPoint) {
+        if (!LEDBinManager.isLEDBinModeEnabled()) {
+            return {
+                inGamut: false,
+                error: 'LED BIN模式未完全启用'
+            };
+        }
+        
+        const point = { x: colorPoint.x, y: colorPoint.y };
+        return LEDBinManager.isPointInMinimumGamut(point);
+    },
+    
+    // 获取色域信息摘要
+    getGamutSummary() {
+        const binStatus = LEDBinManager.getLEDBinStatus();
+        
+        if (!binStatus.allEnabled) {
+            return {
+                enabled: false,
+                message: 'LED BIN模式未完全启用'
+            };
+        }
+        
+        const gamut = binStatus.gamut;
+        if (!gamut) {
+            return {
+                enabled: false,
+                message: '无法计算色域范围'
+            };
+        }
+        
+        return {
+            enabled: true,
+            gamut: gamut,
+            vertices: {
+                red: gamut.red,
+                green: gamut.green,
+                blue: gamut.blue
+            },
+            area: gamut.area,
+            ledBins: {
+                red: binStatus.ledStatus.red,
+                green: binStatus.ledStatus.green,
+                blue: binStatus.ledStatus.blue
+            }
+        };
     }
 };

@@ -352,5 +352,174 @@ const LEDBinManager = {
     getWavelengthBin(color, binId) {
         if (!this.data[color] || !this.data[color].wavelengthBins[binId]) return null;
         return this.data[color].wavelengthBins[binId];
+    },
+    
+    // =================== 色域计算相关方法 ===================
+    
+    // 获取当前LED BIN选择的最小色域范围
+    getMinimumGamut() {
+        const redSelection = this.getSelection('red');
+        const greenSelection = this.getSelection('green');
+        const blueSelection = this.getSelection('blue');
+        
+        // 检查是否所有LED都有BIN选择
+        if (!redSelection.colorBin || !greenSelection.colorBin || !blueSelection.colorBin) {
+            return null;
+        }
+        
+        // 获取各颜色BIN的边界区域
+        const redBounds = this.getColorBinBounds('red', redSelection.colorBin);
+        const greenBounds = this.getColorBinBounds('green', greenSelection.colorBin);
+        const blueBounds = this.getColorBinBounds('blue', blueSelection.colorBin);
+        
+        if (!redBounds || !greenBounds || !blueBounds) {
+            return null;
+        }
+        
+        // 计算最小色域三角形
+        return this.calculateMinimumTriangle(redBounds, greenBounds, blueBounds);
+    },
+    
+    // 获取色度BIN的边界包围盒
+    getColorBinBounds(color, binId) {
+        const coords = this.getColorBinCoordinates(color, binId);
+        if (!coords || coords.length === 0) return null;
+        
+        let minX = Math.min(...coords.map(p => p.x));
+        let maxX = Math.max(...coords.map(p => p.x));
+        let minY = Math.min(...coords.map(p => p.y));
+        let maxY = Math.max(...coords.map(p => p.y));
+        
+        return {
+            minX, maxX, minY, maxY,
+            center: this.getColorBinCenter(color, binId),
+            polygon: coords
+        };
+    },
+    
+    // 计算三个BIN区域形成的最小色域三角形
+    calculateMinimumTriangle(redBounds, greenBounds, blueBounds) {
+        // 为了得到最小色域，我们需要找到三个BIN区域中最接近中心的点
+        // 这样形成的三角形是最小的可实现色域
+        
+        // 使用每个BIN的中心点作为色域三角形的顶点
+        const redVertex = redBounds.center;
+        const greenVertex = greenBounds.center;
+        const blueVertex = blueBounds.center;
+        
+        if (!redVertex || !greenVertex || !blueVertex) {
+            return null;
+        }
+        
+        return {
+            red: redVertex,
+            green: greenVertex,
+            blue: blueVertex,
+            area: this.calculateTriangleArea(redVertex, greenVertex, blueVertex)
+        };
+    },
+    
+    // 计算三角形面积
+    calculateTriangleArea(p1, p2, p3) {
+        return Math.abs((p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y)) / 2);
+    },
+    
+    // 检查点是否在LED BIN定义的最小色域内
+    isPointInMinimumGamut(point) {
+        const gamut = this.getMinimumGamut();
+        if (!gamut) {
+            return { inGamut: false, error: 'LED BIN选择不完整，无法确定色域范围' };
+        }
+        
+        // 使用点在三角形内的判断方法
+        const isInside = this.isPointInTriangle(point, gamut.red, gamut.green, gamut.blue);
+        
+        return {
+            inGamut: isInside,
+            gamut: gamut,
+            distance: isInside ? 0 : this.distanceToTriangle(point, gamut.red, gamut.green, gamut.blue)
+        };
+    },
+    
+    // 判断点是否在三角形内 (使用重心坐标法)
+    isPointInTriangle(point, v1, v2, v3) {
+        const denom = (v2.y - v3.y) * (v1.x - v3.x) + (v3.x - v2.x) * (v1.y - v3.y);
+        
+        if (Math.abs(denom) < 1e-12) {
+            return false; // 三角形退化
+        }
+        
+        const a = ((v2.y - v3.y) * (point.x - v3.x) + (v3.x - v2.x) * (point.y - v3.y)) / denom;
+        const b = ((v3.y - v1.y) * (point.x - v3.x) + (v1.x - v3.x) * (point.y - v3.y)) / denom;
+        const c = 1 - a - b;
+        
+        return a >= 0 && b >= 0 && c >= 0;
+    },
+    
+    // 计算点到三角形的最短距离 (简化版本)
+    distanceToTriangle(point, v1, v2, v3) {
+        // 计算点到三角形三条边的距离，取最小值
+        const d1 = this.distanceToLine(point, v1, v2);
+        const d2 = this.distanceToLine(point, v2, v3);
+        const d3 = this.distanceToLine(point, v3, v1);
+        
+        return Math.min(d1, d2, d3);
+    },
+    
+    // 计算点到线段的距离
+    distanceToLine(point, lineStart, lineEnd) {
+        const A = point.x - lineStart.x;
+        const B = point.y - lineStart.y;
+        const C = lineEnd.x - lineStart.x;
+        const D = lineEnd.y - lineStart.y;
+        
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        
+        if (lenSq === 0) return Math.sqrt(A * A + B * B);
+        
+        let param = dot / lenSq;
+        param = Math.max(0, Math.min(1, param));
+        
+        const xx = lineStart.x + param * C;
+        const yy = lineStart.y + param * D;
+        
+        const dx = point.x - xx;
+        const dy = point.y - yy;
+        
+        return Math.sqrt(dx * dx + dy * dy);
+    },
+    
+    // 检查是否已启用LED BIN模式
+    isLEDBinModeEnabled() {
+        const colors = ['red', 'green', 'blue'];
+        return colors.every(color => {
+            const selection = this.getSelection(color);
+            return selection.luminanceBin && selection.colorBin;
+        });
+    },
+    
+    // 获取LED BIN模式的状态摘要
+    getLEDBinStatus() {
+        const colors = ['red', 'green', 'blue'];
+        const status = {};
+        
+        colors.forEach(color => {
+            const selection = this.getSelection(color);
+            status[color] = {
+                enabled: !!(selection.luminanceBin && selection.colorBin),
+                luminanceBin: selection.luminanceBin,
+                colorBin: selection.colorBin
+            };
+        });
+        
+        const allEnabled = Object.values(status).every(s => s.enabled);
+        const gamut = allEnabled ? this.getMinimumGamut() : null;
+        
+        return {
+            ledStatus: status,
+            allEnabled: allEnabled,
+            gamut: gamut
+        };
     }
 };

@@ -118,9 +118,17 @@ const ColorCalculatorApp = {
         this.elements.inputs.excel = {
             fileInput: document.getElementById('excel-file-input'),
             selectBtn: document.getElementById('select-excel-btn'),
-            loadDefaultBtn: document.getElementById('load-default-btn'),
-            dataStats: document.getElementById('excel-data-stats'),
             tableContainer: document.getElementById('color-table-container')
+        };
+        
+        // 弹窗相关元素
+        this.elements.modal = {
+            excelStatsModal: document.getElementById('excel-stats-modal'),
+            excelStatsContent: document.getElementById('excel-stats-content'),
+            excelStatsConfirm: document.getElementById('excel-stats-confirm'),
+            gamutCheckModal: document.getElementById('gamut-check-modal'),
+            gamutCheckContent: document.getElementById('gamut-check-content'),
+            gamutCheckConfirm: document.getElementById('gamut-check-confirm')
         };
         
         // 应用状态 - 添加选中的目标色列表
@@ -215,6 +223,9 @@ const ColorCalculatorApp = {
         
         // Excel导入相关事件
         this.bindExcelEvents();
+        
+        // 色域边界检测事件
+        this.bindGamutCheckEvents();
         
         // 模式3多选目标色事件
         this.bindMode3Events();
@@ -888,10 +899,17 @@ const ColorCalculatorApp = {
             });
         }
         
-        // 加载默认数据按钮
-        if (excelElements.loadDefaultBtn) {
-            excelElements.loadDefaultBtn.addEventListener('click', () => {
-                ExcelLoader.loadDefaultData();
+        // Excel统计弹窗确认按钮
+        if (this.elements.modal.excelStatsConfirm) {
+            this.elements.modal.excelStatsConfirm.addEventListener('click', () => {
+                this.hideExcelStatsModal();
+            });
+        }
+        
+        // 色域检测弹窗确认按钮
+        if (this.elements.modal.gamutCheckConfirm) {
+            this.elements.modal.gamutCheckConfirm.addEventListener('click', () => {
+                this.hideGamutCheckModal();
             });
         }
     },
@@ -938,8 +956,8 @@ const ColorCalculatorApp = {
         try {
             Logger.info(`Excel数据加载完成: ${colorData.length} 个颜色数据`, 'ExcelLoader');
             
-            // 更新数据统计信息
-            this.updateExcelDataStats();
+            // 显示Excel数据统计弹窗
+            this.showExcelStatsModal(colorData);
             
             // 更新表格显示
             if (typeof ColorTable !== 'undefined') {
@@ -950,8 +968,6 @@ const ColorCalculatorApp = {
             if (this.state.activeMode === 'mode4') {
                 this.updateDisplay();
             }
-            
-            NotificationSystem.success(`成功加载 ${colorData.length} 个颜色数据`);
         } catch (error) {
             ErrorHandler.handle(error, 'Excel data loaded callback');
         }
@@ -1027,9 +1043,6 @@ const ColorCalculatorApp = {
     // Excel数据变化回调
     onExcelDataChanged() {
         try {
-            // 更新数据统计信息
-            this.updateExcelDataStats();
-            
             // 重新绘制图表
             this.updateDisplay();
             
@@ -1042,24 +1055,100 @@ const ColorCalculatorApp = {
         }
     },
     
-    // 更新Excel数据统计信息
-    updateExcelDataStats() {
-        const statsElement = this.elements.inputs.excel.dataStats;
-        if (!statsElement) return;
-        
-        if (!ExcelLoader.isDataLoaded) {
-            statsElement.innerHTML = '<span>未加载数据</span>';
-            return;
-        }
-        
+    // 显示Excel数据统计弹窗
+    showExcelStatsModal(colorData) {
         const stats = ExcelLoader.getDataStats();
-        statsElement.innerHTML = `
-            <span>总计: ${stats.total} 个颜色</span>
-            <span>可见: ${stats.visible} 个</span>
-            <span>高亮: ${stats.highlighted} 个</span>
-            <span>X范围: ${this.formatValue(stats.xRange.min, 'coordinate')} - ${this.formatValue(stats.xRange.max, 'coordinate')}</span>
-            <span>Y范围: ${this.formatValue(stats.yRange.min, 'coordinate')} - ${this.formatValue(stats.yRange.max, 'coordinate')}</span>
+        const content = this.elements.modal.excelStatsContent;
+        
+        if (!content) return;
+        
+        content.innerHTML = `
+            <div class="stats-item">
+                <span class="stats-label">总计:</span>
+                <span class="stats-value">${stats.total} 个颜色</span>
+            </div>
+            <div class="stats-item">
+                <span class="stats-label">可见:</span>
+                <span class="stats-value">${stats.visible} 个</span>
+            </div>
+            <div class="stats-item">
+                <span class="stats-label">高亮:</span>
+                <span class="stats-value">${stats.highlighted} 个</span>
+            </div>
+            <div class="stats-item">
+                <span class="stats-label">X范围:</span>
+                <span class="stats-value">${this.formatValue(stats.xRange.min, 'coordinate')} - ${this.formatValue(stats.xRange.max, 'coordinate')}</span>
+            </div>
+            <div class="stats-item">
+                <span class="stats-label">Y范围:</span>
+                <span class="stats-value">${this.formatValue(stats.yRange.min, 'coordinate')} - ${this.formatValue(stats.yRange.max, 'coordinate')}</span>
+            </div>
         `;
+        
+        this.elements.modal.excelStatsModal.style.display = 'block';
+    },
+    
+    // 隐藏Excel数据统计弹窗
+    hideExcelStatsModal() {
+        this.elements.modal.excelStatsModal.style.display = 'none';
+    },
+    
+    // 显示色域检测结果弹窗
+    showGamutCheckModal(checkResult) {
+        const content = this.elements.modal.gamutCheckContent;
+        
+        if (!content) return;
+        
+        const summary = checkResult.summary;
+        const binStatus = LEDBinManager.getLEDBinStatus();
+        
+        content.innerHTML = `
+            <div class="gamut-led-info">
+                <h4>LED BIN配置</h4>
+                <div class="led-config-grid">
+                    <div class="led-config-item">
+                        <span class="config-label">红色:</span>
+                        <span class="config-value">${binStatus.ledStatus.red.colorBin || '未设置'}</span>
+                    </div>
+                    <div class="led-config-item">
+                        <span class="config-label">绿色:</span>
+                        <span class="config-value">${binStatus.ledStatus.green.colorBin || '未设置'}</span>
+                    </div>
+                    <div class="led-config-item">
+                        <span class="config-label">蓝色:</span>
+                        <span class="config-value">${binStatus.ledStatus.blue.colorBin || '未设置'}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="gamut-check-results">
+                <h4>检测结果</h4>
+                <div class="check-result-grid">
+                    <div class="result-item success">
+                        <span class="result-label">检测完成:</span>
+                        <span class="result-value">${summary.total} 个颜色</span>
+                    </div>
+                    <div class="result-item in-gamut">
+                        <span class="result-label">在色域内:</span>
+                        <span class="result-value">${summary.inGamut} 个</span>
+                    </div>
+                    <div class="result-item out-of-gamut">
+                        <span class="result-label">超出边界:</span>
+                        <span class="result-value">${summary.outOfGamut} 个</span>
+                    </div>
+                    <div class="result-item coverage">
+                        <span class="result-label">覆盖率:</span>
+                        <span class="result-value">${summary.percentage}%</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.elements.modal.gamutCheckModal.style.display = 'block';
+    },
+    
+    // 隐藏色域检测结果弹窗
+    hideGamutCheckModal() {
+        this.elements.modal.gamutCheckModal.style.display = 'none';
     },
     
     // 处理Canvas上的Excel数据点点击
@@ -1226,6 +1315,9 @@ const ColorCalculatorApp = {
             // 选择不完整，隐藏信息
             this.hideLEDInfo(color);
         }
+        
+        // 更新色域状态显示
+        this.onLEDBinSelectionUpdate();
     },
     
     // 显示LED信息
@@ -1443,6 +1535,132 @@ const ColorCalculatorApp = {
         } catch (error) {
             console.warn('计算最大光通量失败:', error);
             return 0;
+        }
+    },
+    
+    // =================== 色域边界检测功能 ===================
+    
+    // 绑定色域检测事件
+    bindGamutCheckEvents() {
+        const checkButton = document.getElementById('check-gamut-boundary');
+        if (checkButton) {
+            checkButton.addEventListener('click', () => {
+                this.performGamutBoundaryCheck();
+            });
+        }
+    },
+    
+    // 执行色域边界检测
+    performGamutBoundaryCheck() {
+        try {
+            // 检查是否有导入的颜色数据
+            const colorData = ExcelLoader.getColorData();
+            if (!colorData || colorData.length === 0) {
+                NotificationSystem.error('请先导入颜色数据');
+                return;
+            }
+            
+            // 检查LED BIN模式是否启用
+            if (!LEDBinManager.isLEDBinModeEnabled()) {
+                NotificationSystem.error('请先在Step1中为红、绿、蓝三色都选择LED分BIN数据');
+                return;
+            }
+            
+            // 执行色域边界检测
+            const checkResult = ColorCalculator.checkGamutBoundaryForTargets(colorData);
+            
+            if (!checkResult.success) {
+                NotificationSystem.error(checkResult.error);
+                return;
+            }
+            
+            // 更新表格显示检测结果
+            if (typeof ColorTable !== 'undefined') {
+                ColorTable.updateGamutCheckResults(checkResult);
+            }
+            
+            // 显示检测结果弹窗
+            this.showGamutCheckModal(checkResult);
+            
+            Logger.info(`色域边界检测完成: ${checkResult.summary.outOfGamut}/${checkResult.summary.total} 个颜色超边界`, 'GamutCheck');
+            
+        } catch (error) {
+            ErrorHandler.handle(error, 'performGamutBoundaryCheck');
+        }
+    },
+    
+    // 更新色域状态显示
+    updateGamutStatusDisplay(checkResult) {
+        const statusElement = document.getElementById('gamut-status');
+        const resultsElement = document.getElementById('gamut-results');
+        
+        if (statusElement) {
+            const binStatus = LEDBinManager.getLEDBinStatus();
+            const gamut = binStatus.gamut;
+            
+            if (gamut) {
+                statusElement.innerHTML = `
+                    LED BIN色域已确定 - 红(${binStatus.ledStatus.red.colorBin}), 
+                    绿(${binStatus.ledStatus.green.colorBin}), 
+                    蓝(${binStatus.ledStatus.blue.colorBin})
+                `;
+                statusElement.className = 'gamut-status enabled';
+            }
+        }
+        
+        if (resultsElement) {
+            resultsElement.style.display = 'block';
+        }
+        
+        // 启用检测按钮
+        const checkButton = document.getElementById('check-gamut-boundary');
+        if (checkButton) {
+            checkButton.disabled = false;
+        }
+    },
+    
+    // 显示色域检测结果摘要
+    showGamutCheckSummary(checkResult) {
+        const resultsElement = document.getElementById('gamut-results');
+        if (!resultsElement) return;
+        
+        const summaryElement = resultsElement.querySelector('.gamut-summary');
+        if (!summaryElement) return;
+        
+        const summary = checkResult.summary;
+        summaryElement.innerHTML = `
+            检测完成: ${summary.total} 个颜色中，
+            <span class="in-gamut">${summary.inGamut} 个在色域内</span>，
+            <span class="out-of-gamut">${summary.outOfGamut} 个超出边界</span>
+            (覆盖率: ${summary.percentage}%)
+        `;
+        
+        if (summary.outOfGamut > 0) {
+            NotificationSystem.warning(`发现 ${summary.outOfGamut} 个超色域边界的颜色，已在表格中标红显示`);
+        } else {
+            NotificationSystem.success('所有颜色都在LED BIN色域范围内');
+        }
+    },
+    
+    // 监听LED BIN选择变化，更新色域按钮状态
+    onLEDBinSelectionUpdate() {
+        const checkButton = document.getElementById('check-gamut-boundary');
+        
+        if (!checkButton) return;
+        
+        const binStatus = LEDBinManager.getLEDBinStatus();
+        
+        if (binStatus.allEnabled && binStatus.gamut) {
+            // LED BIN模式完全启用，启用检测按钮
+            checkButton.disabled = false;
+        } else {
+            // LED BIN模式未完全启用，禁用检测按钮
+            checkButton.disabled = true;
+            
+            // 清除表格中的色域检测结果
+            if (typeof ColorTable !== 'undefined') {
+                ColorTable.clearGamutCheckResults();
+            }
         }
     }
 };

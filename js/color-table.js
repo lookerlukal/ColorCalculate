@@ -17,7 +17,9 @@ const ColorTable = {
         searchKeyword: '',
         sortColumn: 'id',
         sortDirection: 'asc',
-        filteredData: []
+        filteredData: [],
+        showOutOfGamutOnly: false,
+        gamutCheckResults: null
     },
     
     // 初始化表格
@@ -36,15 +38,19 @@ const ColorTable = {
         this.elements.container.innerHTML = `
             <div class="color-table-wrapper">
                 <div class="table-controls">
-                    <div class="search-controls">
-                        <input type="text" id="color-search" placeholder="搜索颜色ID或名称..." class="search-input">
-                        <button id="clear-search" class="clear-btn">清除</button>
-                    </div>
-                    <div class="view-controls">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="show-all-colors" checked>
-                            <span>显示所有颜色点</span>
-                        </label>
+                    <input type="text" id="color-search" placeholder="搜索颜色ID或名称..." class="search-input">
+                    <button id="clear-search" class="clear-btn">清除</button>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-all-colors" checked>
+                        <span>所有颜色</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="show-out-of-gamut-only">
+                        <span>色域外</span>
+                    </label>
+                    <div class="highlight-controls">
+                        <span id="highlight-count" class="highlight-count">已选择: 0</span>
+                        <button id="clear-highlights" class="clear-btn">清除高亮</button>
                     </div>
                 </div>
                 
@@ -57,6 +63,7 @@ const ColorTable = {
                                 <th data-sort="x" class="sortable">X坐标 <span class="sort-indicator">↕</span></th>
                                 <th data-sort="y" class="sortable">Y坐标 <span class="sort-indicator">↕</span></th>
                                 <th>颜色预览</th>
+                                <th data-sort="gamutStatus" class="sortable">色域状态 <span class="sort-indicator">↕</span></th>
                                 <th>操作</th>
                             </tr>
                         </thead>
@@ -106,6 +113,19 @@ const ColorTable = {
             ExcelLoader.colorData.forEach(color => {
                 ExcelLoader.setColorVisibility(color.id, visible);
             });
+        });
+        
+        // 仅显示超色域颜色
+        document.getElementById('show-out-of-gamut-only').addEventListener('change', (e) => {
+            this.state.showOutOfGamutOnly = e.target.checked;
+            this.state.currentPage = 1;
+            this.filterAndRender();
+        });
+        
+        // 清除所有高亮
+        document.getElementById('clear-highlights').addEventListener('click', () => {
+            ExcelLoader.clearAllHighlights();
+            this.updateHighlightCount();
         });
         
         // 表格排序
@@ -162,6 +182,16 @@ const ColorTable = {
             const newHighlightState = !color.highlighted;
             ExcelLoader.setColorHighlight(colorId, newHighlightState);
             this.renderCurrentPage();
+            this.updateHighlightCount();
+        }
+    },
+    
+    // 更新高亮计数
+    updateHighlightCount() {
+        const highlightCountElement = document.getElementById('highlight-count');
+        if (highlightCountElement) {
+            const count = ExcelLoader.getHighlightedColors().length;
+            highlightCountElement.textContent = `已选择: ${count}`;
         }
     },
     
@@ -247,6 +277,14 @@ const ColorTable = {
             data = ExcelLoader.searchColors(this.state.searchKeyword);
         }
         
+        // 色域过滤
+        if (this.state.showOutOfGamutOnly && this.state.gamutCheckResults) {
+            const outOfGamutIds = this.state.gamutCheckResults.results
+                .filter(r => !r.inGamut)
+                .map(r => r.id);
+            data = data.filter(color => outOfGamutIds.includes(color.id));
+        }
+        
         // 排序
         data.sort((a, b) => {
             let aVal = a[this.state.sortColumn];
@@ -283,6 +321,9 @@ const ColorTable = {
             const row = this.createTableRow(color);
             this.elements.tbody.appendChild(row);
         });
+        
+        // 更新高亮计数
+        this.updateHighlightCount();
     },
     
     // 创建表格行
@@ -299,14 +340,25 @@ const ColorTable = {
         const rgb = this.xyToRGB(color.x, color.y);
         const colorPreview = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
         
+        // 获取色域状态
+        const gamutStatus = this.getColorGamutStatus(color);
+        
+        // 根据色域状态设置样式
+        let nameClass = 'name-cell';
+        if (gamutStatus && !gamutStatus.inGamut) {
+            nameClass += ' out-of-gamut';
+            row.classList.add('out-of-gamut');
+        }
+        
         row.innerHTML = `
             <td class="id-cell">${color.id}</td>
-            <td class="name-cell">${color.name}</td>
+            <td class="${nameClass}">${color.name}</td>
             <td class="coord-cell">${PrecisionFormatter.formatValue(color.x, 'coordinate')}</td>
             <td class="coord-cell">${PrecisionFormatter.formatValue(color.y, 'coordinate')}</td>
             <td class="color-preview-cell">
                 <div class="color-swatch" style="background-color: ${colorPreview};" title="CIE坐标: (${PrecisionFormatter.formatValue(color.x, 'coordinate')}, ${PrecisionFormatter.formatValue(color.y, 'coordinate')})"></div>
             </td>
+            <td class="gamut-status-cell">${this.renderGamutStatus(gamutStatus)}</td>
             <td class="action-cell">
                 <button class="action-btn visibility-btn ${color.visible ? 'visible' : 'hidden'}" 
                         title="${color.visible ? '隐藏' : '显示'}">
@@ -466,5 +518,51 @@ const ColorTable = {
             // 高亮显示该颜色
             ExcelLoader.setColorHighlight(colorId, true);
         }
+    },
+    
+    // =================== 色域检测相关方法 ===================
+    
+    // 更新色域检测结果
+    updateGamutCheckResults(results) {
+        this.state.gamutCheckResults = results;
+        this.filterAndRender();
+    },
+    
+    // 获取颜色的色域状态
+    getColorGamutStatus(color) {
+        if (!this.state.gamutCheckResults || !this.state.gamutCheckResults.results) {
+            return null;
+        }
+        
+        const result = this.state.gamutCheckResults.results.find(r => r.id === color.id);
+        return result || null;
+    },
+    
+    // 渲染色域状态
+    renderGamutStatus(gamutStatus) {
+        if (!gamutStatus) {
+            return '<span class="gamut-status unknown">未检测</span>';
+        }
+        
+        if (gamutStatus.inGamut) {
+            return '<span class="gamut-status in-gamut">✓ 色域内</span>';
+        } else {
+            const distance = gamutStatus.distance ? gamutStatus.distance.toFixed(4) : '未知';
+            return `<span class="gamut-status out-of-gamut">✗ 超边界 (距离: ${distance})</span>`;
+        }
+    },
+    
+    // 清除色域检测结果
+    clearGamutCheckResults() {
+        this.state.gamutCheckResults = null;
+        this.state.showOutOfGamutOnly = false;
+        
+        // 取消勾选"仅显示超色域颜色"
+        const checkbox = document.getElementById('show-out-of-gamut-only');
+        if (checkbox) {
+            checkbox.checked = false;
+        }
+        
+        this.filterAndRender();
     }
 };

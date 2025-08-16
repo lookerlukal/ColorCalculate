@@ -532,7 +532,7 @@ const ChartRenderer = {
         }
         
         const visibleColors = ExcelLoader.getVisibleColors();
-        const highlightedColor = ExcelLoader.getHighlightedColor();
+        const highlightedColors = ExcelLoader.getHighlightedColors();
         
         // 批量绘制普通数据点
         this.ctx.save();
@@ -548,10 +548,10 @@ const ChartRenderer = {
             }
         });
         
-        // 绘制高亮点（在最上层）
-        if (highlightedColor) {
-            this.drawExcelDataPoint(highlightedColor, highlightRadius, true);
-        }
+        // 绘制所有高亮点（在最上层）
+        highlightedColors.forEach(color => {
+            this.drawExcelDataPoint(color, highlightRadius, true);
+        });
         
         this.ctx.restore();
     },
