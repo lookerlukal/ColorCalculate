@@ -135,16 +135,17 @@ canvas {
 
 .color-inputs {
     display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
+    gap: 15px;
     margin-bottom: 20px;
 }
 
 .color-input {
     flex: 1;
-    min-width: 200px;
-    padding: 15px;
+    min-width: 0;
+    max-width: 32%;
+    padding: 12px;
     border-radius: 8px;
+    overflow: hidden;
 }
 
 .color-input.red {
@@ -163,22 +164,27 @@ canvas {
 }
 
 .input-group {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 label {
     display: inline-block;
-    width: 80px;
-    margin-right: 10px;
+    width: 60px;
+    margin-right: 8px;
+    font-size: 14px;
 }
 
 input[type="number"] {
-    width: 100px;
-    padding: 8px;
+    flex: 1;
+    min-width: 80px;
+    max-width: 120px;
+    padding: 6px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    font-size: 14px;
 }
 
 .target-color {
@@ -215,6 +221,27 @@ input[type="number"] {
 
 .calc-btn:hover {
     background-color: #2980b9;
+}
+
+.calc-btn-group {
+    display: flex;
+    gap: 8px;
+    margin: 20px 0;
+}
+
+.calc-btn-left {
+    border-radius: 6px 0 0 6px;
+    flex: 1;
+}
+
+.calc-btn-right {
+    border-radius: 0 6px 6px 0;
+    flex: 1;
+    background-color: #27ae60;
+}
+
+.calc-btn-right:hover {
+    background-color: #229954;
 }
 
 .result {
@@ -777,12 +804,12 @@ input[type="number"] {
 /* =================== LED分BIN选择器样式 =================== */
 
 .led-bin-selector {
-    margin: 15px 0;
-    padding: 12px;
+    margin: 10px 0;
+    padding: 8px;
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 12px;
 }
 
 .led-enable-group {
@@ -921,6 +948,16 @@ input[type="number"] {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+    .color-inputs {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .color-input {
+        max-width: 100%;
+        min-width: 0;
+    }
+    
     .led-bin-selector {
         padding: 10px;
         font-size: 13px;
@@ -933,6 +970,29 @@ input[type="number"] {
     
     .led-wavelength-info {
         font-size: 11px;
+    }
+}
+
+/* 中等屏幕优化 */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .color-input {
+        max-width: 31%;
+        padding: 10px;
+    }
+    
+    .color-inputs {
+        gap: 12px;
+    }
+    
+    label {
+        width: 55px;
+        font-size: 13px;
+    }
+    
+    input[type="number"] {
+        max-width: 100px;
+        padding: 5px;
+        font-size: 13px;
     }
 }
 

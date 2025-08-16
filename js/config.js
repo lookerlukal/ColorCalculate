@@ -82,7 +82,8 @@ const ColorCalculatorConfig = {
         calculation: 6,   // 计算精度
         display: {        // 显示精度设置
             coordinate: 4,
-            luminance: 4
+            luminance: 4,
+            percentage: 1     // 百分比精度（小数点后1位）
         }
     },
 

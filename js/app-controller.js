@@ -315,12 +315,22 @@ const ColorCalculatorApp = {
             });
         }
         
-        // 模式2计算按钮
+        // 模式3计算按钮（按设定值计算）
         const calcLvBtn = document.getElementById('calculate-lv');
         if (calcLvBtn) {
             calcLvBtn.addEventListener('click', () => {
-                Logger.info('手动触发模式2计算', 'UI');
+                Logger.info('手动触发模式3计算（按设定值）', 'UI');
                 this.performCalculation();
+                this.updateDisplay();
+            });
+        }
+        
+        // 模式3计算按钮（按最大值计算）
+        const calcLvMaxBtn = document.getElementById('calculate-lv-max');
+        if (calcLvMaxBtn) {
+            calcLvMaxBtn.addEventListener('click', () => {
+                Logger.info('手动触发模式3计算（按最大值）', 'UI');
+                this.calculateMode3MaxLuminance();
                 this.updateDisplay();
             });
         }
@@ -635,21 +645,33 @@ const ColorCalculatorApp = {
                 
                 const required = ColorCalculator.calculateRequiredLuminance(tempColorPoints);
                 
+                // 获取RGB基色的最大光通量值用于计算百分比
+                const maxLvValues = {
+                    red: parseFloat(document.getElementById('red-lv')?.value) || 100,
+                    green: parseFloat(document.getElementById('green-lv')?.value) || 100,
+                    blue: parseFloat(document.getElementById('blue-lv')?.value) || 100
+                };
+                
+                // 计算使用百分比
+                const redPercent = maxLvValues.red > 0 ? (required.red / maxLvValues.red * 100) : 0;
+                const greenPercent = maxLvValues.green > 0 ? (required.green / maxLvValues.green * 100) : 0;
+                const bluePercent = maxLvValues.blue > 0 ? (required.blue / maxLvValues.blue * 100) : 0;
+                
                 html += `
                     <div class="target-result">
-                        <h4>${target.name}</h4>
+                        <h4>${target.name} (目标光通量: ${this.formatValue(target.lv)}lm)</h4>
                         <div class="result-grid">
                             <div class="result-item">
                                 <span>红色所需光通量:</span>
-                                <span>${this.formatValue(required.red)}lm</span>
+                                <span>${this.formatValue(required.red)}lm (${this.formatValue(redPercent, 'percentage')}%)</span>
                             </div>
                             <div class="result-item">
                                 <span>绿色所需光通量:</span>
-                                <span>${this.formatValue(required.green)}lm</span>
+                                <span>${this.formatValue(required.green)}lm (${this.formatValue(greenPercent, 'percentage')}%)</span>
                             </div>
                             <div class="result-item">
                                 <span>蓝色所需光通量:</span>
-                                <span>${this.formatValue(required.blue)}lm</span>
+                                <span>${this.formatValue(required.blue)}lm (${this.formatValue(bluePercent, 'percentage')}%)</span>
                             </div>
                         </div>
                     </div>
@@ -665,6 +687,103 @@ const ColorCalculatorApp = {
                     </div>
                 `;
                 Logger.error(`目标色${index + 1}计算失败: ${error.message}`, 'Mode3Calculator');
+            }
+        });
+        
+        resultsContainer.innerHTML = html;
+        
+        if (hasError) {
+            NotificationSystem.warning('部分目标色计算失败，请检查坐标是否在RGB三角形内');
+        }
+    },
+    
+    // 计算模式3的多目标色最大光通量需求
+    calculateMode3MaxLuminance() {
+        const resultsContainer = document.getElementById('mode3-results');
+        if (!resultsContainer) return;
+        
+        if (this.state.selectedTargets.length === 0) {
+            resultsContainer.innerHTML = '<p class="empty-hint">请先添加目标色并点击计算</p>';
+            return;
+        }
+        
+        // 获取RGB基色的最大光通量值
+        const maxLvValues = {
+            red: parseFloat(document.getElementById('red-lv')?.value) || 100,
+            green: parseFloat(document.getElementById('green-lv')?.value) || 100,
+            blue: parseFloat(document.getElementById('blue-lv')?.value) || 100
+        };
+        
+        let html = '';
+        let hasError = false;
+        
+        this.state.selectedTargets.forEach((target, index) => {
+            try {
+                // 验证RGB基色数据
+                const rgbValid = ['red', 'green', 'blue'].every(color => {
+                    const point = this.state.colorPoints[color];
+                    return ColorCalculator.validateColorPoint(point);
+                });
+                
+                if (!rgbValid) {
+                    throw new Error('RGB基色数据无效，请检查模式1中的RGB设置');
+                }
+                
+                // 验证目标色数据
+                if (!target || isNaN(target.x) || isNaN(target.y)) {
+                    throw new Error('目标色数据无效');
+                }
+                
+                // 构造临时colorPoints用于计算最大光通量
+                const tempColorPoints = {
+                    red: this.state.colorPoints.red,
+                    green: this.state.colorPoints.green,
+                    blue: this.state.colorPoints.blue,
+                    target: { x: target.x, y: target.y, lv: 1 } // 光通量值在此步骤中不重要
+                };
+                
+                // 计算最大可达光通量
+                const maxResult = ColorCalculator.calculateMaxLuminance(tempColorPoints, maxLvValues);
+                
+                // 使用最大光通量作为目标光通量重新计算
+                tempColorPoints.target.lv = maxResult.maxLuminance;
+                const required = ColorCalculator.calculateRequiredLuminance(tempColorPoints);
+                
+                // 计算使用百分比
+                const redPercent = maxLvValues.red > 0 ? (required.red / maxLvValues.red * 100) : 0;
+                const greenPercent = maxLvValues.green > 0 ? (required.green / maxLvValues.green * 100) : 0;
+                const bluePercent = maxLvValues.blue > 0 ? (required.blue / maxLvValues.blue * 100) : 0;
+                
+                html += `
+                    <div class="target-result">
+                        <h4>${target.name} (最大可达光通量: ${this.formatValue(maxResult.maxLuminance)}lm)</h4>
+                        <div class="result-grid">
+                            <div class="result-item">
+                                <span>红色所需光通量:</span>
+                                <span>${this.formatValue(required.red)}lm (${this.formatValue(redPercent, 'percentage')}%)</span>
+                            </div>
+                            <div class="result-item">
+                                <span>绿色所需光通量:</span>
+                                <span>${this.formatValue(required.green)}lm (${this.formatValue(greenPercent, 'percentage')}%)</span>
+                            </div>
+                            <div class="result-item">
+                                <span>蓝色所需光通量:</span>
+                                <span>${this.formatValue(required.blue)}lm (${this.formatValue(bluePercent, 'percentage')}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                Logger.info(`目标色${index + 1}最大光通量计算完成: 最大=${this.formatValue(maxResult.maxLuminance)}, R=${this.formatValue(required.red)}(${this.formatValue(redPercent)}%), G=${this.formatValue(required.green)}(${this.formatValue(greenPercent)}%), B=${this.formatValue(required.blue)}(${this.formatValue(bluePercent)}%)`, 'Mode3MaxCalculator');
+            } catch (error) {
+                hasError = true;
+                html += `
+                    <div class="target-result error">
+                        <h4>${target.name}</h4>
+                        <p class="error-message">计算失败: ${error.message}</p>
+                    </div>
+                `;
+                Logger.error(`目标色${index + 1}最大光通量计算失败: ${error.message}`, 'Mode3MaxCalculator');
             }
         });
         
